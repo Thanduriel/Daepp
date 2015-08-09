@@ -1,0 +1,67 @@
+//functions
+const string bla = "lololol";
+
+func int someExternal(var string name, var int count) 0x00FFFFFF;
+
+/*current outputQue:
+int 		test			|
+str			bla 		|
+constInt	2		|
+int			test	|
+mul					|	|
+call					|	|
+assign						|
+*/
+/*
+func void foo()
+{
+	var int test;
+	
+	test = 42;
+	
+	test = someExternal(bla, 2 * test);
+};*/
+
+func int compilerHelperFunc(var int a, var string name, var C_Npc char)
+{
+	return a + 5;
+};
+
+/*
+ things to add:
+ sign +,-
+ assignOps +=,...
+*/
+
+FUNC C_NPC 	Hlp_GetNpc				(VAR C_NPC instanceName) 0x00; //not the correct address obviously
+
+func void compilerTestFunction()
+{
+	//assignment for all relevant types
+	var int localInt; localInt = 1 << (2 + 1) * 2;
+	var c_npc localNpc; localNpc = Hlp_getNPC(hero);
+	var string localStr; localStr = "fooo!";
+	
+	//call with all var types
+	localInt = compilerHelperFunc(localInt, localStr, localNpc);
+	
+	localInt = (localInt + 4) * 3;
+	
+	//call with all const types
+	localInt = compilerHelperFunc(42, "consttt", localNpc);
+};
+
+/*func void Get_secondtarget(var C_NPC slf)
+{
+ 	if(Npc_GetDistToNpc(self, slf) <= meleeweapon_pc_2.range * 222 ) //meleeweapon_pc enthält die aktuelle Nahkampfwaffe des heros und wird sekündlich in EVT_lernbdo aktualisiert
+	&&(Npc_GetDistToPlayer(slf) <=  meleeweapon_pc_2.range * 222 )
+	&&(!Npc_IsPlayer(slf))
+    {
+		opfer_02 = Hlp_getNPC(slf);    	
+    };    
+};
+
+func void foo(var string a, var int b)
+{
+	someExternal(a,b);
+};*/

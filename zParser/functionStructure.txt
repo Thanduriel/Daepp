@@ -1,0 +1,185 @@
+function symbol:
+
+size - amount of parameters
+	are the symbols found after this
+offset - (offset << 12) return type
+content[0] - + 6 * symbol.ele() start of codeblock
+
+excert from compiled function:
+start on stack: 111352
+gesadr:		0x5E3216
+func void Get_secondtarget(var C_NPC slf)
+{
+ 	if(Npc_GetDistToNpc(self, slf) <= meleeweapon_pc_2.range * 222 ) //meleeweapon_pc enthält die aktuelle Nahkampfwaffe des heros und wird sekündlich in EVT_lernbdo aktualisiert
+	&&(Npc_GetDistToPlayer(slf) <=  meleeweapon_pc_2.range * 222 )
+	&&(!Npc_IsPlayer(slf))
+    {
+		opfer_02 = Hlp_getNPC(slf);    	
+    };    
+};
+00 00 00 		----------
+
+3C			return    
+
+// **************************************************** //		
+
+43 7B 24 00 00		pushInst	slf
+
+4A			AssignInst	
+
+43 7B 24 00 00		pushInst	slf		
+
+3E FD 00 00 00		callExtern 	Npc_IsPlayer()	
+
+20			not	  
+
+40 DE 00 00 00		pushInt 	222
+
+50 09 3F 00 00 		setInstance	meleeweapon_pc_2
+
+41 15 06 00 00		pushVar		range
+
+02			[*]mul
+
+43 7B 24 00 00 		pushInst	slf
+
+3E EC 00 00 00 		callExtern	Npc_GetDistToPlayer()
+
+0F 			[<=]LowerEq
+
+40 DE 00 00 00		pushInt 	222
+
+50 09 3F 00 00 		setInstance	meleeweapon_pc_2
+
+41 15 06 00 00		pushVar		range
+
+02			[*]mul
+
+43 51 06 00 00		pushInst	self
+
+43 7B 24 00 00 		pushInst	slf
+
+3E E3 00 00 00 		callExtern	Npc_GetDistToNpc()
+
+0F			[<=]LowerEq
+
+0C			[&&]lAnd
+ 
+0C			[&&]lAnd
+ 
+4C 5B B3 01 00 		jumpf
+
+40 7B 24 00 00 		pushInt		slf
+
+3E 5C 02 00 00 		callExt		Hlp_getNpc()
+
+43 79 24 00 00		pushInst	opfer_02
+
+4A			assignInst
+
+3C			return
+3C 40 00 00 FA 43 41 20 06 00 00 49 40 00 00 00 00 41 21 06 00 00 49 40 00 00 96 43 41 22 06 00 00 49 40 00 00 F0 41 41 23 06 00 00 49 40 00 00 F0 41 41 25 06 00 00 49 40 00 00 34 C2 41 24 06 00 00 49 40 01 00 00 00 41 26 06 00 00 09 40 00 00 00 00 41 27 06 00 00 49 40 00 00 96 43 41 28 06 00 00 49 40 00 00 F0 41 41 29 06 00 00 49 40 00 00 70 42 41 2B 06 00 00 49 40 00 00 B2 C2 41 2A 06 00 00 49 40 01 00 00 00 41 2C 06 00 00 09 40 00 00 00 00 41 2D 06 00 00 49 40 00 00 AF 43 41 2E 06 00 00 49 40 00 00 F0 41 41 2F 06 00 00 49 40 00 00 B2 42 41 31
+
+
+// **************************************************** //	
+
+stack adr: 111483
+
+code stack begins at line: 0x5C81D3
+
+3C 			return
+
+3C			return
+
+
+// localInt = 1 << (2 + 1) * 2;
+
+40 02 00 00 00		pushInt		2
+
+40 01 00 00 00		pushInt		1
+
+40 02 00 00 00		pushInt		2
+
+00			add
+
+02			mul
+
+40 01 00 00 00		pushInt		1
+
+0D			shl
+
+41 81 24 00 00		pushVar		localInt
+
+09			is
+
+
+//localNpc = Hlp_getNPC(hero);
+
+40 55 06 00 00 		pushInt		hero
+
+3E 5C 02 00 00		callExt		Hlp_getNpc()
+
+43 82 24 00 00		pushInst	localNpc
+
+4A			assignInst
+
+
+//localStr = "fooo!";
+
+41 E9 94 00 00		pushVar		"fooo!"
+
+41 83 24 00 00		pushVar		localStr
+
+46			assignStr
+
+
+//localInt = compilerHelperFunc(localInt, localStr, localNpc);
+
+41 81 24 00 00		pushVar		localInt
+
+41 83 24 00 00		pushVar		localStr
+
+43 82 24 00 00		pushInst	localNpc
+
+3D 5C B3 01 00 		call		compilerHelperFunc()
+
+41 81 24 00 00		pushVar		localInt
+
+09			is
+
+
+//localInt = (localInt + 4) * 3;
+
+40 03 00 00 00 		pushInt		3
+
+40 04 00 00 00		pushInt		4
+
+41 81 24 00 00		pushVar		localInt
+
+00			add
+
+02			mul
+
+41 81 24 00 00		pushVar		localInt
+
+09			is
+
+
+//localInt = compilerHelperFunc(42, "consttt", localNpc);
+
+40 2A 00 00 00		pushInt		42	
+
+41 EA 94 00 00		pushVar		"consttt"
+
+43 82 24 00 00		pushInst	localNpc
+
+3D 5C B3 01 00		call		compilerHelperFunc()
+
+41 81 24 00 00		pushVar		localInt
+
+09			is
+
+3C 3C			ret
+
+
+better function that has all the tricks

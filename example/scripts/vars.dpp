@@ -1,0 +1,22 @@
+/******************************************
+ * basic variable declarations and definitions
+ * deadalus_pp_parser\example
+ */ 
+//basic symbols
+var int i;
+var float f;
+var string str;
+
+//const symbols
+const int ci = 42;
+const int hex = 0x0AF310BB;
+const float cf = -2.71;
+const string cstr = "Hast ja nichtmal Gold dabei.";
+
+//evaluted math expressions
+const int easyMath = (42.5 + 13);
+const int ciTerm = 1+(1+(1 << 4)) * 42 ;
+//imlicit type casting
+const int cif = 2 * 0.5;
+
+

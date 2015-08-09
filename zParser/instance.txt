@@ -1,0 +1,39 @@
+symbols defined as instance or as var with a class type
+
+ABOUT
+
+Instances are similar to vars; only difference is that there size in the bitfield is 0;
+
+// ******************************* //
+
+EXAMPLE
+
+global instance "hero"
+
+name		data			interpreted
+
+bhasName	01 00 00 00 		true
+name		48 45 52 4F 0A		hero
+offset		00 00 00 00
+bitfield	00 70 40 00		size 0; type Instance; flag 64 is always set
+fileNr		01 00 00 00 
+line		EA 00 00 00 		234
+lineCount	01 00 00 00		1 
+posBegin	DB 18 00 00 
+posCount	17 00 00 00 
+content		03 00 00 00 		3
+parent		C3 05 00 00		C_NPC	
+
+local var b_assessDamage.Quarho
+
+01 00 00 00 
+42 5F 41 53 53 45 53 53 44 41 4D 41 47 45 2E 51 55 41 52 48 4F 0A
+00 00 00 00
+01 70 40 00
+FE 00 00 00 
+0A 00 00 00 
+01 00 00 00 
+75 01 00 00 
+14 00 00 00 
+00 00 00 00 
+C3 05 00 00
