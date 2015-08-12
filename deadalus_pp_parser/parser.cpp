@@ -499,7 +499,8 @@ int Parser::declareFunc()
 	//always end with a return
 	//for some reason gothic even ends with two rets 
 	//same happens here when a "return" is found
-	functionSymbol.byteCode.emplace_back(game::Instruction::Ret);
+	//update: the compiler adds one return to every function including those without a body
+	//functionSymbol.byteCode.emplace_back(game::Instruction::Ret);
 
 	m_gameData.m_functions.add(std::move(functionSymbol));
 
@@ -532,6 +533,7 @@ int Parser::declareInstance()
 	int i = getType(*typeToken);
 
 	//type does not matter when it is derivated from a prototype or not existent
+	//thus the check may happen afterwards
 	game::Symbol_Instance instance(names[0], i);
 
 	if (i == -1)
@@ -551,8 +553,14 @@ int Parser::declareInstance()
 		parseCodeBlock(instance);
 	}
 
-	for (auto& name : names)
-		m_gameData.m_symbols.emplace(name, i, 0, 0, i);
+	if (names.size() > 1)
+		for (auto& name : names)
+		{
+			m_gameData.m_instances.emplace(name, instance);
+		}
+
+	//try moving after the references are not needed anymore
+	m_gameData.m_instances.add(std::move(instance));
 
 	return 0;
 }

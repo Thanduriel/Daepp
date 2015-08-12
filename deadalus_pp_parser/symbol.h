@@ -180,8 +180,20 @@ namespace game{
 			Symbol_Function(_name, 0)
 		{
 			//type is imlicitly initialized by Symbol_Function
-			//so it has to be overwriten
+			//so it has to be overwritten
 			type = _type;
+		}
+		//copy like constructor that takes all attributes of the _parent symbol
+		//while giving it a unique name and id
+		Symbol_Instance(const std::string& _name, const Symbol_Instance& _parent) :
+			Symbol_Function(_name, 0)
+		{
+			type = _parent.type;
+			flags = _parent.flags;
+			size = _parent.size;
+			stackBegin = _parent.stackBegin;
+
+			byteCode = _parent.byteCode;
 		}
 	};
 

@@ -56,6 +56,11 @@ namespace par{
 		for (int i = 11; i < m_gameData.m_types.size(); ++i)
 			compileClass(stream, m_gameData.m_types[i]);
 
+		for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
+			compileFunction(stream, m_gameData.m_prototypes[i]);
+		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
+			compileFunction(stream, m_gameData.m_instances[i]);
+
 		//default value for no parent
 		parent = 0xFFFFFFFF;
 
@@ -230,6 +235,8 @@ namespace par{
 
 	int Compiler::compileStack(std::ofstream& _stream)
 	{
+		game::Instruction retInstr = game::Instruction::Ret;
+
 		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
 		{
 			for (auto& inst : m_gameData.m_functions[i].byteCode)
@@ -239,6 +246,9 @@ namespace par{
 				//optional param
 				if (inst.hasParam) _stream.write((char*)&inst.param, 4);
 			}
+
+			//every function ends with a return
+			_stream.write((char*)&retInstr, 1);
 		}
 
 		return 0;
