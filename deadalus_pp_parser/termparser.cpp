@@ -101,8 +101,12 @@ namespace par{
 
 						operatorStack.push_back(new MathSymbol((functionSymbols.size() - 1 + 11) * -1, *token));
 					}
+					else if ((i = m_gameData.m_instances.find(str)) != -1)
+					{
+						outputQue.push_back(&m_gameData.m_instances[i]);
+					}
 					//const strings are not parsed by Term()
-					//thus they can only be found in the codesegment
+					//thus they can only be found in a codesegment
 					else if ((i = m_gameData.m_constStrings.find(str)) != -1)
 					{
 						outputQue.push_back(&m_gameData.m_constStrings[i]);
@@ -184,6 +188,28 @@ namespace par{
 
 					operatorStack.pop_back();
 				}
+			}
+			//array var
+			else if (*token == TokenType::SquareBracketLeft)
+			{
+				m_lexer.prev();
+
+				//the previous token must allow for array access
+				par::Token& peek = *m_lexer.nextToken();
+				if (!(peek == TokenType::Symbol)) PARSINGERROR("This symbol does not support array like access.", &peek);
+
+				//
+				game::DummyInt result(0);
+
+				if (Term(&result)) PARSINGERROR("Term does not resolve to an int.", token);
+
+				TOKEN(SquareBracketRight);
+
+				game::Symbol& symbol = *(game::Symbol*)outputQue.back();
+				outputQue.pop_back(); //will be substituted by the ArraySymbol
+				if (symbol.size < 2) PARSINGERROR("Not an array.", &peek);
+
+				dummySymbols.emplace_back(new ArraySymbol(symbol, result.value));
 			}
 		}
 		while (operatorStack.size() && (operatorStack.back() != nullptr))
@@ -339,6 +365,19 @@ namespace par{
 
 	int Parser::pushParamInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack)
 	{
+		if (_sym->type == 2)
+		{
+			game::Symbol& sym = *(game::Symbol*)_sym;
+
+			if (sym.size > 1)
+			{
+				_instrStack.emplace_back(game::Instruction::pushArray, ((game::Symbol*)_sym)->id);
+				_instrStack.push_back((game::Instruction)((par::ArraySymbol*)_sym)->index);
+
+				return 0;
+			}
+		}
+
 		switch (_sym->type)
 		{
 		case 2:

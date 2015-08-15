@@ -77,5 +77,8 @@
     <ClCompile Include="termparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="symbol.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

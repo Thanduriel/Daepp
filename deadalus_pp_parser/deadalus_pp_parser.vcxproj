@@ -239,6 +239,7 @@
     <ClCompile Include="operators.cpp" />
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="symbol.cpp" />
     <ClCompile Include="termparser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

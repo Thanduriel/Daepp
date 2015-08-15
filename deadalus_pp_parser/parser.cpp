@@ -550,13 +550,25 @@ int Parser::declareInstance()
 
 	if(!TOKENOPT(End))
 	{
+		m_lexer.prev();
+
 		parseCodeBlock(instance);
+
+		if (!TOKENOPT(End))
+		{
+			if (m_alwaysSemikolon)
+			{
+				PARSINGERROR("End';' expected.", tokenOpt);
+			}
+			else //read token is part of the next declaration
+				m_lexer.prev();
+		}
 	}
 
 	if (names.size() > 1)
-		for (auto& name : names)
+		for (int i = 1; i < names.size(); ++i)
 		{
-			m_gameData.m_instances.emplace(name, instance);
+			m_gameData.m_instances.emplace(names[i], instance);
 		}
 
 	//try moving after the references are not needed anymore

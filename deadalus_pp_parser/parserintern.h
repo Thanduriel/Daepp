@@ -89,4 +89,16 @@ namespace par{
 		Token& token; // the token, that represents this operator in the source code
 	};
 
+	/* a token that substitutes array var with the correct index*/
+	class ArraySymbol : public game::Symbol
+	{
+	public:
+		ArraySymbol(const game::Symbol& _sym, size_t _index):
+			game::Symbol(_sym),
+			index(_index)
+		{}
+
+		size_t index;
+	};
+
 }

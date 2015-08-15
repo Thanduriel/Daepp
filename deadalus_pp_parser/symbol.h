@@ -41,7 +41,6 @@ namespace game{
 			size(_size),
 			flags(_flags)
 		{
-			static int idCount = 0;
 			id = idCount++;
 		};
 
@@ -73,6 +72,8 @@ namespace game{
 		int size;
 
 		virtual void saveContent(std::ofstream& _stream) {};
+
+		static int idCount; //initialized in "symbol.cpp"
 	};
 
 
@@ -254,7 +255,7 @@ namespace game{
 		{
 			//the name is generated using the id and adding a 0xFF to the front
 			//this seems to be the way the original parser is doing it
-			name = char(0xFF) + std::to_string(id);
+			name = char(0xFF) + std::to_string(id) + char(0x0A);
 		}
 
 

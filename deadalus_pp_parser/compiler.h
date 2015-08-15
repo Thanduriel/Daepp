@@ -21,19 +21,23 @@ namespace par{
 		int compile(const std::string& _outputFile);
 
 	private:
-		int compileSortedTable(std::ofstream& _stream);
+		int compileSortedTable();
 
 		//writes a single given symbol to the stream
-		int compileSymbol(std::ofstream& _stream, game::Symbol& _sym);
+		int compileSymbol( game::Symbol& _sym);
 
-		int compileClass(std::ofstream& _stream, game::Symbol_Type& _sym);
+		int compileClass( game::Symbol_Type& _sym);
 
 		//countes the size on the stack and adds the code offsets to the function symbol
-		int compileFunction(std::ofstream& _stream, game::Symbol_Function& _sym);
+		int compileFunction( game::Symbol_Function& _sym);
 		
-		int compileStack(std::ofstream& _stream);
+		int compileStack();
 
-		game::GameData& m_gameData;
+		void compileByteCode(std::vector< game::StackInstruction >& _byteCode);
+
+		std::ofstream fileStream;
+
+		game::GameData& m_gameData; // reference to the gameData to compile
 
 		int stackSize; //holds the current size of the stack in byte
 

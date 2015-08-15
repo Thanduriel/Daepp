@@ -59,7 +59,7 @@ private:
 	void assignFunctionParam(game::Symbol_Function& _func);
 
 	/* parseInstruction() ***********************
-	* reads code from the tokenstream and transaltes it to bytecode
+	* reads code from the tokenstream and translates it to bytecode
 	* @param _token first token of the instruction
 	* @param _stack the stack where the bytecode is pushed to
 	*/
