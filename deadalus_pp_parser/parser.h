@@ -102,6 +102,7 @@ private:
 	//tokenizer
 	Lexer m_lexer;
 
+	//
 	Compiler m_compiler;
 
 	//config
@@ -111,9 +112,11 @@ private:
 
 	std::string m_currentFileName; //< name of the parsed file
 	std::string m_currentFile; //< currently parsed file
-	size_t m_pp; //<parser pointer
+	//size_t m_pp; //<parser pointer
 	int m_lineCount; //< current line
 
+
+	game::Symbol_Type* m_currentNamespace;
 	//resolved content
 	game::GameData m_gameData;
 };

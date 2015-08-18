@@ -3,5 +3,10 @@
 scripts\constants.dpp
 //scripts\externals.d
 scripts\classes.dpp
-scripts\functions.dpp
-//scripts\floats.d
+//scripts\functions.dpp
+//scripts\floats.
+
+scripts\ai_constants.d
+scripts\npc_default.d
+scripts\BAU_911_Elena.d
+

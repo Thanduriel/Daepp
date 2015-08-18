@@ -57,14 +57,11 @@ namespace par{
 		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
 			compileFunction( m_gameData.m_instances[i]);
 
-		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
-			compileSymbol( *(game::Symbol*)&m_gameData.m_internStrings[i]);
-
 		//default value for no parent
 		parent = 0xFFFFFFFF;
 
 		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
-			compileSymbol( *(game::Symbol*)&m_gameData.m_internStrings[i]);
+			compileSymbol(*(game::Symbol*)&m_gameData.m_internStrings[i]);
 
 		//(int)data stack length
 		fileStream.write((char*)&stackSize, 4);
@@ -152,7 +149,6 @@ namespace par{
 		//add flag that is always set for uknown reasons
 		unsigned int bitfield = ((_sym.type > 7 ? 7 :_sym.type) << 12) | ((_sym.flags | game::Flag::AlwaysSet) << 16) | _sym.size;
 		fileStream.write((char*)&bitfield, 4);
-		//fileStream << bitfield;
 
 		//(int) filenr
 		fileStream.write((char*)&tmp, 4);
@@ -180,10 +176,10 @@ namespace par{
 	//	fileStream << (int)0;
 
 		//for consts and functions the content
-		if (_sym.testFlag(game::Flag::Const))
-		{
-			_sym.saveContent(fileStream);
-		}
+	//	if (_sym.testFlag(game::Flag::Const))
+	//	{
+		_sym.saveContent(fileStream);
+	//	}
 
 		//parent
 		tmp = _sym.type > 7 ? m_gameData.m_types[_sym.type].id : parent;
@@ -197,6 +193,9 @@ namespace par{
 
 	int Compiler::compileClass(game::Symbol_Type& _sym)
 	{
+		//update size information
+		_sym.size = _sym.elem.size();
+
 		compileSymbol(_sym);
 
 		parent = _sym.id;
@@ -218,6 +217,7 @@ namespace par{
 	{
 		_sym.stackBegin = stackSize;
 
+		//calculate size the code will take
 		for (int i = 0; i < _sym.byteCode.size(); ++i)
 		{
 			stackSize += _sym.byteCode[i].hasParam ? 5 : 1;

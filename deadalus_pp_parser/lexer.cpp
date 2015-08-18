@@ -2,7 +2,6 @@
 #include "easylogging++.h"
 
 namespace par{
-
 /* token operators*/
 
 	bool Token::operator==(const TokenType& _oth)
@@ -139,7 +138,7 @@ void Lexer::analyse()
 			}
 
 			//string starts with a letter
-			else if ((m_text[i] >= 0x41 && m_text[i] <= 0x5A) || (m_text[i] >= 0x61 && m_text[i] <= 0x7A))
+			else if ((m_text[i] >= 0x41 && m_text[i] <= 0x5A) || (m_text[i] >= 0x61 && m_text[i] <= 0x7A) || isValidChar(m_text[i]))
 			{
 				lookEnd = 1;
 				//save index of the first char to return it later on
@@ -161,12 +160,16 @@ void Lexer::analyse()
 		//any char that cannot be part of a symbol terminates the word
 		else if (lookEnd == 1)
 		{
-			if (!(m_text[i] >= '0' && m_text[i] <= '9') && !(m_text[i] >= 0x41 && m_text[i] <= 0x5A) && !(m_text[i] >= 0x61 && m_text[i] <= 0x7A) && m_text[i] != '_' && m_text[i] != '^' && m_text[i] != '@')
+			if (!(m_text[i] >= '0' && m_text[i] <= '9') && !(m_text[i] >= 0x41 && m_text[i] <= 0x5A) && !(m_text[i] >= 0x61 && m_text[i] <= 0x7A) && !isValidChar(m_text[i]))
 			{
 				//decrement the index counter so that it points to the last char of the word
 				//causes revaluation of the termination char in the next iteration as it could be ';' or an operator
 				i--;
 				m_tokens.emplace_back(TokenType::Symbol, begin, i);
+
+				//convert to upper case
+				for (int j = begin; j <= i; ++j)
+					m_text[j] = ::tolower(m_text[j]);
 
 				//return to default state
 				lookEnd = 0;
@@ -180,7 +183,7 @@ void Lexer::analyse()
 			if (!(m_text[i] >= '0' && m_text[i] <= '9') && ((m_text[i] != '.') || (count > 1)))
 			{
 				//hex numbers allow A-F as letters
-				if (isHex && m_text[i] >= 'a' && m_text[i] <= 'f') continue;
+				if (isHex && m_text[i] >= 'A' && m_text[i] <= 'F') continue;
 
 				i--;
 
@@ -246,6 +249,14 @@ float Lexer::getFloat(Token& _token)
 bool Lexer::compare(const Token& _token, const std::string& _str)
 {
 	return !m_text.compare(_token.begin, 1 + _token.end - _token.begin, _str);
+}
+
+//additional characters that are valid in symbol names
+const std::string validChars = "_^@üöäÜÄÖ";
+
+bool Lexer::isValidChar(char _c)
+{
+	return !(validChars.find(_c) == std::string::npos);
 }
 
 }//end namespace

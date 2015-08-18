@@ -18,6 +18,8 @@ namespace par{
 
 		//inlined symbols
 		std::vector < std::unique_ptr < game::Symbol_Core > > dummySymbols;
+		//somehow destruction goes wrong when a Symbol is added to dummySymbols
+		std::vector < std::unique_ptr < game::Symbol > > dummyArraySymbols;
 
 		//functions that are stored on the stack
 		//transformation to a stack token: (index + 11) * -1
@@ -34,7 +36,7 @@ namespace par{
 
 		while (token = m_lexer.nextToken())
 		{
-			if (*token == TokenType::End || *token == TokenType::CurlyBracketLeft) //if statments are closed by a begining codeblock
+			if (*token == TokenType::End || *token == TokenType::CurlyBracketLeft || *token == TokenType::SquareBracketRight) //if statments are closed by a begining codeblock
 			{
 				m_lexer.prev();
 				break;
@@ -99,7 +101,7 @@ namespace par{
 					{
 						functionSymbols.push_back(&m_gameData.m_functions[i]);
 
-						operatorStack.push_back(new MathSymbol((functionSymbols.size() - 1 + 11) * -1, *token));
+						operatorStack.push_back(new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token));
 					}
 					else if ((i = m_gameData.m_instances.find(str)) != -1)
 					{
@@ -110,6 +112,10 @@ namespace par{
 					else if ((i = m_gameData.m_constStrings.find(str)) != -1)
 					{
 						outputQue.push_back(&m_gameData.m_constStrings[i]);
+					}
+					else if (m_currentNamespace && ((i = m_currentNamespace->elem.find(str)) != -1))
+					{
+						outputQue.push_back(&((m_currentNamespace->elem)[i]));
 					}
 
 					else PARSINGERROR("Symbol does not exist.", token);
@@ -193,11 +199,13 @@ namespace par{
 			else if (*token == TokenType::SquareBracketLeft)
 			{
 				m_lexer.prev();
+				m_lexer.prev();
 
 				//the previous token must allow for array access
 				par::Token& peek = *m_lexer.nextToken();
 				if (!(peek == TokenType::Symbol)) PARSINGERROR("This symbol does not support array like access.", &peek);
 
+				m_lexer.nextToken();//discard the SquareBracket
 				//
 				game::DummyInt result(0);
 
@@ -209,7 +217,9 @@ namespace par{
 				outputQue.pop_back(); //will be substituted by the ArraySymbol
 				if (symbol.size < 2) PARSINGERROR("Not an array.", &peek);
 
-				dummySymbols.emplace_back(new ArraySymbol(symbol, result.value));
+				ArraySymbol* arraySym = new ArraySymbol(symbol, result.value);
+				dummyArraySymbols.emplace_back(arraySym);
+				outputQue.push_back(arraySym);
 			}
 		}
 		while (operatorStack.size() && (operatorStack.back() != nullptr))
@@ -242,7 +252,7 @@ namespace par{
 				auto paramStack = it;
 
 				//check params
-				for (int i = func.params.size() - 1; i >= 0; --i)
+				for (int i = (int)func.params.size() - 1; i >= 0; --i)
 				{
 					paramStack--;
 					//int params can be filled by a const int aswell
@@ -409,7 +419,7 @@ namespace par{
 	{
 		Token* tokenOpt;
 
-		if (_token != CurlyBracketLeft) PARSINGERROR("Expected '}'.", &_token);
+		if (_token != CurlyBracketLeft) PARSINGERROR("Expected '{'.", &_token);
 
 		while (TOKENOPT(Symbol))
 		{

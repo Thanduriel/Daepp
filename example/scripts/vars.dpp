@@ -3,6 +3,7 @@
  * deadalus_pp_parser\example
  */ 
 //basic symbols
+
 var int i;
 var float f;
 var string str;

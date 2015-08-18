@@ -127,6 +127,7 @@ public:
 	bool compare(const Token& _token, const std::string& _str);
 
 private:
+	bool isValidChar(char _c);
 	std::list < Token > m_tokens;
 	std::list < Token >::iterator m_iterator;
 

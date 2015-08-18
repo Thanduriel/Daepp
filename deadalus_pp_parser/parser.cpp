@@ -22,7 +22,8 @@ namespace par{
 Parser::Parser(const std::string& _configFile)
 	:m_lexer(m_currentFile),
 	m_gameData(lang::basicTypes),
-	m_compiler(m_gameData)
+	m_compiler(m_gameData),
+	m_currentNamespace(nullptr)
 {
 	LOG(INFO) << "Parser created.";
 
@@ -212,17 +213,17 @@ int Parser::parseFile(const std::string& _fileName)
 
 	m_currentFile.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
-	if (!m_caseSensitive) std::transform(m_currentFile.begin(), m_currentFile.end(), m_currentFile.begin(), ::tolower);
+	//if (!m_caseSensitive) std::transform(m_currentFile.begin(), m_currentFile.end(), m_currentFile.begin(), ::tolower);
 
 
 	LOG(INFO) << "Parsing Code-File " << _fileName;
 
 	// split into tokens
+	// and convert to uppercase
 	m_lexer.analyse();
 	
 	//reset file specific vars
 	//useless now?
-	m_pp = 0;
 	m_lineCount = 0;
 
 	Token* pToken;
@@ -263,7 +264,7 @@ int Parser::parseFile(const std::string& _fileName)
 		}
 		else if (!m_currentFile.compare(pToken->begin, len, "prototype"))
 		{
-			//		DeclarePrototype();
+			returnCode = declarePrototype();
 		}
 		//not recognized?
 		else
@@ -354,7 +355,7 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		//only non consts are added after knowing name and type
 		if (!_const)
 		{
-			bool check = _table.emplace(word, index);
+			bool check = _table.emplace(word, index, 0,arraySize);
 			if (!check) parserLog(Warning, "Symbol redefinition.", nameToken);
 		}
 
@@ -372,14 +373,14 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		if (arraySize > 1) TOKEN(CurlyBracketLeft);
 
 		//todo: remove the need for a garbage stack
-		std::vector< game::StackInstruction > stack;
+		//std::vector< game::StackInstruction > stack;
 
 		//type decides how to parse
 		if (index == 2)
 		{
-			game::ConstSymbol<int, 2> constSymbol(word);
+			game::ConstSymbol<int, 2> constSymbol(word, arraySize);
 			constSymbol.value.resize(arraySize);
-			
+
 			for (int i = 0; i < arraySize; ++i)
 			{
 				game::DummyInt result(0);
@@ -392,7 +393,7 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		}
 		else if (index == 1)
 		{
-			game::ConstSymbol<float, 1> constSymbol(word);
+			game::ConstSymbol<float, 1> constSymbol(word, arraySize);
 			constSymbol.value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
@@ -407,7 +408,7 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		}
 		else if (index == 3)
 		{
-			game::ConstSymbol_String constSymbol(word);
+			game::ConstSymbol_String constSymbol(word, arraySize);
 			constSymbol.value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
@@ -544,6 +545,8 @@ int Parser::declareInstance()
 
 		//init function starts with a call to its prototype
 		instance.byteCode.emplace_back(game::Instruction::call, m_gameData.m_prototypes[i].id);
+
+		instance.type = m_gameData.m_prototypes[i].type;
 	}
 
 	TOKEN(ParenthesisRight);
@@ -552,7 +555,11 @@ int Parser::declareInstance()
 	{
 		m_lexer.prev();
 
+		m_currentNamespace = &m_gameData.m_types[instance.type];
+
 		parseCodeBlock(instance);
+
+		m_currentNamespace = nullptr;
 
 		if (!TOKENOPT(End))
 		{
@@ -603,7 +610,11 @@ int Parser::declarePrototype()
 	m_gameData.m_prototypes.emplace(name, i);
 	auto& prototype = m_gameData.m_prototypes.back();
 
+	m_currentNamespace = &m_gameData.m_types[i];
+
 	parseCodeBlock(prototype);
+
+	m_currentNamespace = nullptr;
 
 	if (!TOKENOPT(End))
 	{

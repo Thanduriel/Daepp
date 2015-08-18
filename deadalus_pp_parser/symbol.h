@@ -35,7 +35,7 @@ namespace game{
 	//inherit for more complex structures
 	struct Symbol: public Symbol_Core
 	{
-		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, int _size = 1, int _parent = 0)
+		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, size_t _size = 1, int _parent = 0)
 			: name(_name),
 			Symbol_Core(_type),
 			size(_size),
@@ -69,9 +69,16 @@ namespace game{
 			return (flags & _flag) != 0;
 		}
 
-		int size;
+		size_t size;
 
-		virtual void saveContent(std::ofstream& _stream) {};
+		virtual void saveContent(std::ofstream& _stream) 
+		{
+			// string vars require a single termination char as content
+			// while int and float want a dword
+			static int defaultContent = 0x0000000A;
+			_stream.write((char*)&defaultContent, type == 3 ? 1 : 4);
+
+		};
 
 		static int idCount; //initialized in "symbol.cpp"
 	};
@@ -152,8 +159,8 @@ namespace game{
 	//symbol for functions
 	struct Symbol_Function : public Symbol
 	{
-		Symbol_Function(const std::string& _name, unsigned int _retType)
-			: Symbol(_name, 5),
+		Symbol_Function(const std::string& _name, unsigned int _retType, unsigned int _flags = Flag::Const)
+			: Symbol(_name, 5, _flags, 0),
 			returnType(_retType)
 		{
 		}
@@ -178,7 +185,7 @@ namespace game{
 	struct Symbol_Instance : public Symbol_Function
 	{
 		Symbol_Instance(const std::string& _name, unsigned int _type, Symbol_Instance* _prototype = nullptr) :
-			Symbol_Function(_name, 0)
+			Symbol_Function(_name, 0, 0) //no additional flags set
 		{
 			//type is imlicitly initialized by Symbol_Function
 			//so it has to be overwritten
@@ -193,6 +200,7 @@ namespace game{
 			flags = _parent.flags;
 			size = _parent.size;
 			stackBegin = _parent.stackBegin;
+			id = _parent.id;
 
 			byteCode = _parent.byteCode;
 		}
@@ -203,7 +211,8 @@ namespace game{
 	 */
 	struct Symbol_Type: public Symbol
 	{
-		Symbol_Type(std::string& _name) : Symbol( _name, 7 ){};
+		//atom or default types do not need a unique id
+		Symbol_Type(std::string& _name, bool _isAtom = false) : Symbol(_name, 4){ if (_isAtom) idCount--; };
 
 		//complex types consist of other types
 		//atom types have elem.size() = 0
@@ -220,8 +229,8 @@ namespace game{
 	template< typename _T, unsigned int _type>
 	struct ConstSymbol : public Symbol
 	{
-		ConstSymbol(const std::string& _name)
-			: Symbol(_name, _type, Const)//(1 << 16)
+		ConstSymbol(const std::string& _name, size_t _size = 1)
+			: Symbol(_name, _type, Const, _size)//(1 << 16)
 		{
 		};
 
@@ -244,8 +253,8 @@ namespace game{
 	//symbol for const strings
 	struct ConstSymbol_String : public ConstSymbol < std::string, 3 >
 	{
-		ConstSymbol_String(const std::string& _name)
-			: ConstSymbol(_name)
+		ConstSymbol_String(const std::string& _name, size_t _size = 1)
+			: ConstSymbol(_name, _size)
 		{}
 
 		//constructor for const strings (like "fooo!") in code segments
@@ -255,14 +264,18 @@ namespace game{
 		{
 			//the name is generated using the id and adding a 0xFF to the front
 			//this seems to be the way the original parser is doing it
-			name = char(0xFF) + std::to_string(id) + char(0x0A);
+			name = char(0xFF) + std::to_string(id);
 		}
 
 
 		void saveContent(std::ofstream& _stream) override
 		{
 			for (std::string& str : value)
+			{
+				//add string termination
+				str += char(0x0A);
 				_stream.write((char*)&str[0], str.size());
+			}
 		};
 	};
 
