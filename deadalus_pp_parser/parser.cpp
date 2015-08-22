@@ -438,7 +438,8 @@ int Parser::declareFunc()
 	TOKENEXT(Symbol, typeToken);
 	TOKENEXT(Symbol, nameToken);
 
-	game::Symbol_Function functionSymbol(m_lexer.getWord(*nameToken), getType(*typeToken));
+	m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken));
+	game::Symbol_Function& functionSymbol = m_gameData.m_functions.back();
 
 	TOKEN(ParenthesisLeft);
 
@@ -502,8 +503,6 @@ int Parser::declareFunc()
 	//same happens here when a "return" is found
 	//update: the compiler adds one return to every function including those without a body
 	//functionSymbol.byteCode.emplace_back(game::Instruction::Ret);
-
-	m_gameData.m_functions.add(std::move(functionSymbol));
 
 	return 0;
 }

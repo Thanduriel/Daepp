@@ -255,9 +255,9 @@ namespace par{
 				for (int i = (int)func.params.size() - 1; i >= 0; --i)
 				{
 					paramStack--;
-					//int params can be filled by a const int aswell
-					if (func.params[i].type != (*paramStack)->type && (func.params[i].type != 2 || (*paramStack)->type != 8))
-						PARSINGERROR("Invalid param type.", &op.token);
+					
+					if (!verifyParam(func.params[i], *(*paramStack)))
+						PARSINGERROR("No overload with the given arguments found.", &op.token);;
 				}
 
 				auto firstParam = paramStack;
@@ -500,6 +500,9 @@ namespace par{
 
 			switch (_func.params[i].type)
 			{
+				//floats and ints are handled the same in gbc
+			case 1: assignInstr = game::Instruction::assign;
+				pushInstr = game::Instruction::pushVar;
 			case 2: assignInstr = game::Instruction::assign;
 				pushInstr = game::Instruction::pushVar;
 				break;
@@ -513,6 +516,27 @@ namespace par{
 			_func.byteCode.emplace_back(pushInstr, _func.params[i].id);
 			_func.byteCode.emplace_back(assignInstr);
 		}
+	}
+
+	// ***************************************************** //
+
+	bool Parser::verifyParam(game::Symbol& _expected, game::Symbol_Core& _found)
+	{
+		//float params
+		if (_expected.type == 1 && (_found.type == 8 || _found.type == 9))
+		{
+			//dirty hack
+			//results into a pointer typecast of the value
+			_found.type = 8;
+
+			return true;
+		}
+		//int params can be filled by a const int aswell
+		//default instance(7) is valid with any kind of instance params
+		else if (_expected.type != _found.type && (_expected.type != 2 || _found.type != 8)
+			&& (_expected.type != 7 || _found.type <= 10))
+			return false;
+		return true;
 	}
 
 }

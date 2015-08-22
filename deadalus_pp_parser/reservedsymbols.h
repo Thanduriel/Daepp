@@ -9,8 +9,11 @@
 
 #define MAKEKEY(a,b) (a | (b << 16))
 
+//operator param list
 #define OPPARAMLIST game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, std::vector< game::StackInstruction >* _stack
 
+//generic const float and int operations
+// with a beeing the operation in c++
 #define CONSTOPERATION(a) { 0x00080008, [](OPPARAMLIST){auto* operand0 = (game::DummyInt*)(_operand0);auto* operand1 = (game::DummyInt*)(_operand1);return new game::DummyInt(operand0->value a operand1->value);} },{ 0x00080009, [](OPPARAMLIST){auto* operand0 = (game::DummyInt*)(_operand0);auto* operand1 = (game::DummyFloat*)(_operand1);return new game::DummyFloat((float)operand0->value a operand1->value);} },{ 0x00090009, [](OPPARAMLIST){auto* operand0 = (game::DummyFloat*)(_operand0);auto* operand1 = (game::DummyFloat*)(_operand1);return new game::DummyFloat(operand0->value a operand1->value);} }
 
 namespace lang{
@@ -140,13 +143,22 @@ namespace lang{
 		Operator(">", 8, LtR, 2),
 		Operator("<=", 8, LtR, 2),
 		Operator(">=", 8, LtR, 2),
-		Operator("==", 9, LtR, 2),
+		Operator("==", 9, LtR, 2, game::Instruction::eq),
 		Operator("!=", 9, LtR, 2),
 		Operator("&", 10, LtR, 2),
 		Operator("^", 11, LtR, 2),
-		Operator("|", 12, LtR, 2),
-		Operator("&&", 13, LtR, 2, game::Instruction::And),
-		Operator("||", 14, LtR, 2),
+		Operator("|", 12, LtR, 2, game::Instruction::Or,
+		{
+			{ 0x00080008, [](OPPARAMLIST)
+			{
+				auto* operand0 = (game::DummyInt*)(_operand0);
+				auto* operand1 = (game::DummyInt*)(_operand1);
+
+				return new game::DummyInt(operand0->value | operand1->value);
+			} }
+		}),
+		Operator("&&", 13, LtR, 2, game::Instruction::land),
+		Operator("||", 14, LtR, 2, game::Instruction::lor),
 		Operator("=", 15, RtL, 2,
 		{
 			{ 0x00070007, [](OPPARAMLIST)

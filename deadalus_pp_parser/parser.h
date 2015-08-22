@@ -58,6 +58,12 @@ private:
 	//pushes the code that assigns the values on the stack to the function params
 	void assignFunctionParam(game::Symbol_Function& _func);
 
+	/* verifyParam() *****************************
+	* @return true when the types match
+	* takes into account implicit typecast and consts
+	*/
+	bool verifyParam(game::Symbol& _expected, game::Symbol_Core& _found);
+
 	/* parseInstruction() ***********************
 	* reads code from the tokenstream and translates it to bytecode
 	* @param _token first token of the instruction
