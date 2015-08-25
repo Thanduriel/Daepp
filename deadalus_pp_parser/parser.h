@@ -3,6 +3,7 @@
 #include <string>
 #include "lexer.h"
 #include "compiler.h"
+#include "parserintern.h"
 
 namespace par {
 
@@ -117,12 +118,13 @@ private:
 	bool m_alwaysSemikolon;
 
 	std::string m_currentFileName; //< name of the parsed file
-	std::string m_currentFile; //< currently parsed file
+	std::string m_currentFile; //< content of the currently parsed file
 	//size_t m_pp; //<parser pointer
 	int m_lineCount; //< current line
 
 
 	game::Symbol_Type* m_currentNamespace;
+	game::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
 	//resolved content
 	game::GameData m_gameData;
 };

@@ -1,7 +1,6 @@
 #include "easylogging++.h"
 
 #include "parser.h"
-#include "parserintern.h"
 #include "reservedsymbols.h"
 
 using namespace std;
@@ -96,12 +95,25 @@ namespace par{
 					{
 						outputQue.push_back(&m_gameData.m_symbols[i]);
 					}
-					//functions go to the stack first
+					//functions go to the stack first when it is a call
 					else if ((i = m_gameData.m_functions.find(str)) != -1)
 					{
-						functionSymbols.push_back(&m_gameData.m_functions[i]);
+						Token* tokenOpt;
+						// a function call
+						if (TOKENOPT(TokenType::ParenthesisLeft))
+						{
+							functionSymbols.push_back(&m_gameData.m_functions[i]);
+							operatorStack.push_back(new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token));
 
-						operatorStack.push_back(new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token));
+							operatorStack.emplace_back((MathSymbol*)nullptr);
+						}
+						//function as param
+						else
+						{
+							outputQue.push_back(&m_gameData.m_functions[i]);
+
+							m_lexer.prev();
+						}
 					}
 					else if ((i = m_gameData.m_instances.find(str)) != -1)
 					{
@@ -115,10 +127,14 @@ namespace par{
 					}
 					else if (m_currentNamespace && ((i = m_currentNamespace->elem.find(str)) != -1))
 					{
-						outputQue.push_back(&((m_currentNamespace->elem)[i]));
+						outputQue.push_back(&(m_currentNamespace->elem[i]));
 					}
-
-					else PARSINGERROR("Symbol does not exist.", token);
+					// inside a file declarations can apear after a symbol is used
+					else
+					{
+						m_undeclaredSymbols.emplace(str, *token);
+						outputQue.push_back(&m_undeclaredSymbols.back());
+					}
 				}
 				else PARSINGERROR("Unknown symbol or not a const expression.", token);
 			}
@@ -375,10 +391,10 @@ namespace par{
 
 	int Parser::pushParamInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack)
 	{
+		//array
 		if (_sym->type == 2)
 		{
 			game::Symbol& sym = *(game::Symbol*)_sym;
-
 			if (sym.size > 1)
 			{
 				_instrStack.emplace_back(game::Instruction::pushArray, ((game::Symbol*)_sym)->id);
@@ -396,6 +412,10 @@ namespace par{
 
 		case 3:
 			_instrStack.emplace_back(game::Instruction::pushVar, ((game::Symbol*)_sym)->id);
+			break;
+
+		case 5: _instrStack.emplace_back(((game::Symbol*)_sym)->testFlag(game::Const) ? game::Instruction::pushInt : game::pushVar,
+			((game::Symbol*)_sym)->id);
 			break;
 
 		case 7:

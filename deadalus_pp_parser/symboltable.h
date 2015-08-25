@@ -46,6 +46,11 @@ public:
 		return true;
 	};
 
+	void erase(size_t _i)
+	{
+		m_elem.erase(m_elem.begin() + _i);
+	}
+
 	/* find() ***********************
 	 * @param _name name of the element
 	 * @return index of the element

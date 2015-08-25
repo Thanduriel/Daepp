@@ -7,7 +7,6 @@
 #include "dirent.h"
 
 #include "parser.h"
-#include "parserintern.h"
 #include "basictypes.h"
 #include "jofilelib.hpp"
 #include "reservedsymbols.h"
@@ -277,6 +276,8 @@ int Parser::parseFile(const std::string& _fileName)
 		if (returnCode == -1) return -1;
 	}
 
+	if (m_undeclaredSymbols.size()) PARSINGERROR("Symbol does not exist.", &m_undeclaredSymbols[0].token);
+
 	return 0;
 }
 
@@ -438,7 +439,19 @@ int Parser::declareFunc()
 	TOKENEXT(Symbol, typeToken);
 	TOKENEXT(Symbol, nameToken);
 
-	m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken));
+	string name = m_lexer.getWord(*nameToken);
+	//could have been used already
+	int j = m_undeclaredSymbols.find(name);
+	if (j != -1)
+	{
+		m_undeclaredSymbols[j].returnType = getType(*typeToken);
+		m_gameData.m_functions.add(m_undeclaredSymbols[j]);
+		m_undeclaredSymbols.erase(j);
+	}
+	else
+	{
+		m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken));
+	}
 	game::Symbol_Function& functionSymbol = m_gameData.m_functions.back();
 
 	TOKEN(ParenthesisLeft);

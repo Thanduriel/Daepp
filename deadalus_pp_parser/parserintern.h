@@ -101,4 +101,30 @@ namespace par{
 		size_t index;
 	};
 
+
+	class UndeclaredSymbol : public game::Symbol_Function
+	{
+	public:
+		UndeclaredSymbol(const std::string& _name, Token& _token) :
+			Symbol_Function(_name, 0),
+			token(_token)
+		{}
+
+		//move constructor
+		//required to allow std::vector::erase
+		//does only copying since an UndeclaredSymbol does not possess any dynamic data beside its name
+		UndeclaredSymbol(UndeclaredSymbol&& _other): 
+			Symbol_Function(_other),
+			token(_other.token)
+		{ }
+
+		UndeclaredSymbol& operator=(UndeclaredSymbol&& other) 
+		{ 
+			name = std::move(other.name);
+			token = other.token;
+			return *this; 
+		}
+
+		Token& token; //keep reference for error msgs
+	};
 }

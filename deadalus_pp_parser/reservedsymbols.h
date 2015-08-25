@@ -184,6 +184,12 @@ namespace lang{
 				_stack->emplace_back(game::Instruction::assignStr);
 
 				return new game::Symbol_Core(3);
+			} },
+			{ 0x00050005, [](OPPARAMLIST)
+			{
+				_stack->emplace_back(game::Instruction::assignFunc);
+
+				return new game::Symbol_Core(5);
 			} }
 		}),
 		Operator("+=", 15, RtL, 2, game::Instruction::assignAdd),

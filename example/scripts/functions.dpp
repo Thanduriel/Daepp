@@ -33,7 +33,11 @@ func int compilerHelperFunc(var int a, var string name, var C_Npc char)
  assignOps +=,...
 */
 
-FUNC C_NPC 	Hlp_GetNpc				(VAR C_NPC instanceName) 0x00; //not the correct address obviously
+func int floatCall(var float param)
+{
+	floatCall(1);//with an int
+	floatCall(0.8); //with a float
+};
 
 func void compilerTestFunction()
 {

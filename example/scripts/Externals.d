@@ -116,7 +116,7 @@ FUNC VOID 	AI_UseItemToState		(VAR C_NPC self, VAR INT itemInstance, VAR INT sta
 FUNC INT	AI_UseMob				(VAR C_NPC self, VAR STRING schemeName, VAR INT targetState) { return 0; };
 // Benutze Mob mit angegebenen Schema-Namen bis zum Zustand "targetState". Wird diese Funktion aufgerufen
 // und der angegebene 'targetState' ist bereits vorhanden, läuft der NSC zwar trotzdem zum MOB, tut dann aber nichts
-FUNC INT  	Wld_IsMobAvailable		(VAR C_NPC self, VAR STRING schemeName) {};
+FUNC INT  	Wld_IsMobAvailable		(VAR C_NPC self, VAR STRING schemeName) 0x006F5E20;
 // Sucht sich ein Mobsi im Umkreis von 10m und liefert TRUE falls gefunden. MOB wird nur zurückgeliefert, wenn es nicht besetzt ist.
 func int	Wld_GetMobState			(var C_NPC self, var string schemeName );
 // Liefert den State zum nächsten Mob mit 'schemeName' zurück bzw. '-1' wenn kein solches Mob gefunden wurde
@@ -136,7 +136,7 @@ FUNC VOID 	AI_GotoWP 				(VAR C_NPC n0, VAR STRING s0 ) { };
 // Npc-Instanz läuft zum namentlich angegeben Waypoint
 FUNC VOID 	AI_GotoFP				(VAR C_NPC self, VAR STRING fpName) {};
 // Sucht sich einen Freepoint im Umkreis von 20m vom NSC, bewegt sich dorthin und richtet sich entsprechend aus.
-// Suchkriterium wie bei Wld_IsFPAvailable()
+// Suchkriterium wie bei Wld_IsFPAvailable() ;
 FUNC VOID AI_GotoNextFP 			(var C_NPC self, VAR STRING fpName ) { };
 //wie AI_GotoFP() allerdings Suchkriterium wie bei Wld_IsNextFPAvailable()
 FUNC VOID 	AI_GotoNpc				(VAR C_NPC self, VAR C_NPC other) {};
@@ -154,9 +154,9 @@ FUNC STRING Npc_GetNearestWP		(VAR C_NPC self) { return ""; };
 FUNC string	Npc_GetNextWP			(VAR C_NPC self) {return ""; };
 // Liefert den zweitnahesten WP vom NSC zurück
 // -------------------------------------------------------------------------------------------
-FUNC INT  Wld_IsFPAvailable			(VAR C_NPC self, VAR STRING fpName) {};
+FUNC INT  Wld_IsFPAvailable			(VAR C_NPC self, VAR STRING fpName) 0x006EB5B0;
 // Sucht einen Freepoint im Umkreis von 20m vom NSC und liefert TRUE falls vorhanden und frei ('self' zählt als Blockierer nicht!) und sichtbar
-func int  Wld_IsNextFPAvailable     (var C_NPC self, VAR STRING fpName)
+func int  Wld_IsNextFPAvailable     (var C_NPC self, VAR STRING fpName) 0x006EB860;
 //  wie Wld_IsFPAvailable(), aber es wird immer der nahegelegenste genommen und 'self' zählt als Blockierer!
 FUNC INT  Npc_IsOnFP				(VAR C_NPC self, VAR STRING name)
 // Abfrage darauf, ob der Nsc auf einem Freepoint mit name Teilstring steht
@@ -338,23 +338,26 @@ func INT  	Wld_RemoveItem          	(VAR C_ITEM item)		{ };
 // !!! hiermit wird das globale Item aus der Welt gelöscht ???
 
 // ---------------------------------------- INVENTORY ----------------------------------------
-FUNC VOID 	CreateInvItem 				(VAR C_NPC n0, VAR INT n1 ) { };
+FUNC VOID 	CreateInvItem 				(VAR C_NPC n0, VAR INT n1 ) 0x006E7620;
 //  gibt der angegebenen Instanz (self oder other) ein Item ins Inventory
-FUNC VOID 	CreateInvItems 				(VAR C_NPC n0, VAR INT n1, VAR INT n2 ) { };
+FUNC VOID 	CreateInvItems 				(VAR C_NPC n0, VAR INT n1, VAR INT n2 ) 0x006E7B60;
 // wie vorherige Funktion, nur das Multi-Items (z.B.: 100 Pfeile) ins Inventory kreiert werden
-FUNC C_Item Npc_GetInvItem				(VAR C_NPC self, VAR INT itemInstance) 	{};
+FUNC C_Item Npc_GetInvItem				(VAR C_NPC self, VAR INT itemInstance) 	0x006EEF00;
 // Ermittle ItemInstanz aus Inventory
-FUNC INT	Npc_HasItems				(VAR C_NPC n0, VAR INT itemInstance) { return 0; };
+FUNC INT	Npc_HasItems				(VAR C_NPC n0, VAR INT itemInstance) 0x006E72E0;
 // Liefert "1", wenn NSC die angegebene Anzahl von Items besitzt.-> NpcHasItem ist damit obsolete
-func INT  	Npc_GetInvItemBySlot    	(VAR C_NPC self, VAR INT category, VAR INT slotNr)
+func INT  	Npc_GetInvItemBySlot    	(VAR C_NPC self, VAR INT category, VAR INT slotNr) 0x006EF020;
 // Mit diesem Befehl läßt sich nachsehen, ob in einem bestimmten Slot einer bestimmten Kategorie ein item vorhanden ist
 // ist das der Fall, wird dieses Item in die globale Variable item geschrieben
 // gibt jetzt die Anzahl zurueck, wenn das Item stackable ist
 //. Den Transfer machst Du dann per Npc_RemoveInvItems() und Npc_CreateInvItems().
-func void 	Npc_RemoveInvItem			(VAR C_NPC owner, VAR int itemInstance )	{};
+func void 	Npc_RemoveInvItem			(VAR C_NPC owner, VAR int itemInstance )	0x006E7D90;
 // !!! das globale Item wird gelöscht ???
-func void	Npc_RemoveInvItems			(VAR C_NPC owner, VAR int itemInstance, VAR INT amount )	{ };
+func void	Npc_RemoveInvItems			(VAR C_NPC owner, VAR int itemInstance, VAR INT amount ) 0x006E8200;
 // !!! wie Npc_RemoveInvItem, nur das Multislotgegenstände gelöscht werden ???
+
+//added
+func void Npc_ClearInventory			(var C_NPC owner) 0x006E7F90; //latest
 // ------------------------------------------ TRUHEN -----------------------------------------
 FUNC VOID 	Mob_CreateItems				(VAR STRING mobName, VAR INT itemInstance, VAR INT amount) {};
 // Erzeuge "amount" Items der Instanz "itemInstance" in oCMobContainer mit angegebenen Vobnamen.
@@ -405,7 +408,7 @@ FUNC INT 	Npc_IsDetectedMobOwnedByGuild(var C_NPC user, VAR INT ownerguild ) { r
 //Liefert >0, falls "ownerguild" der Besitzer des vom "user" benutzten Mob ist.
 // VORSICHT: Diese Funktion ist nur in Verbindung mit PERC_MOVEMOB erlaubt !!!
 // ------------------------------------------ TRADE -----------------------------------------
-FUNC VOID 	Npc_GiveItem 				(VAR C_NPC n0, VAR C_ITEM n1, VAR C_NPC n2 ) { };
+FUNC VOID 	Npc_GiveItem 				(VAR C_NPC n0, VAR C_ITEM n1, VAR C_NPC n2 ) 0x006E73E0;
 //Der NSC "self" gibt den NSC "other" den angegebenen Gegenstand "item". Der Gegenstand wandert sofort ins Inventory des anderen.
 FUNC INT 	Npc_StartItemReactModules	(VAR C_NPC self, VAR C_NPC other, VAR C_ITEM item) { return 0; };
 // Prüfe alle ItemReact-Module von "self" auf Gegenstand "item" von Geber "other" und starte passende Reaction-Funktion
@@ -700,7 +703,7 @@ FUNC INT  	Npc_SetTrueGuild			(var C_NPC npc, VAR INT guildID)  { };
 // Setzt die wahre Gilde des NSCs
 FUNC VOID 	Wld_SetGuildAttitude		(var INT guild1, VAR INT attitude, VAR INT guild2) 0x006E1DD0;
 // Setze Gildenattitude neu
-FUNC INT  	Wld_GetGuildAttitude		(var INT guild1, VAR INT guild2) 0x006E1E30; //latest
+FUNC INT  	Wld_GetGuildAttitude		(var INT guild1, VAR INT guild2) 0x006E1E30;
 // Ermittle Gildenattitude
 FUNC INT  	Npc_GetPermAttitude			(var C_NPC self, VAR C_NPC other) {};
 // Ermittle die permanente Attitude von "self" zu "other"
@@ -804,10 +807,10 @@ FUNC INT 	Npc_HasFightTalent			(VAR C_NPC self, VAR INT tal) 		{ return 0; };
 // ***                                        MAGIE                                        ***
 // *******************************************************************************************
 
-FUNC VOID	Npc_CreateSpell				(VAR C_NPC self, VAR INT spellnr) {};
+FUNC VOID	Npc_CreateSpell				(VAR C_NPC self, VAR INT spellnr) 0x006F7840;
 // NSc bekommt Zauberspruch zugewiesen kann diesen aber noch nicht gebrauchen
 // (erscheint ausgegraut im Auswahlkranz)
-FUNC VOID	Npc_LearnSpell				(VAR C_NPC self, VAR INT spellnr) {};
+FUNC VOID	Npc_LearnSpell				(VAR C_NPC self, VAR INT spellnr) 0x006E6D00;
 // Was könnte das wohl heißen ? Ich glaube damit kann man den (spellnr) Zauber zuweisen
 FUNC VOID	Npc_SetTeleportPos			(VAR C_NPC self) {};
 // Magie/Zauberstein Teleport Spruch : letzte Position des NSCs merken, zwecks späteren dahinbeamens.
