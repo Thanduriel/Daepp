@@ -669,6 +669,9 @@ int Parser::declareClass()
 	while ((token = m_lexer.nextToken()) && ret != -1 && !m_currentFile.compare(token->begin, 1 + token->end - token->begin, "var"))
 		ret = declareVar(0, type.elem);
 
+	for (size_t i = 0; i < type.elem.size(); ++i)
+		type.elem[i].setFlag(game::Flag::Classvar);
+
 	m_gameData.m_types.add(std::move(type));
 
 	if (ret == -1) return -1;

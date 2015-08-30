@@ -734,9 +734,9 @@ FUNC VOID   AI_SetNpcsToState			(var C_NPC self, VAR FUNC aiStateFunc, VAR INT r
 // VORSICHT: Diese Funktion ist Buggy, wird aber derzeit auch NICHT verwendet!
 // -> FINGER WEG!!! (SN)
 // -------------------------------------------------------------------------------------------
-FUNC INT	Npc_IsInState				(VAR C_NPC self, VAR FUNC state) { return 0; };
+FUNC INT	Npc_IsInState				(VAR C_NPC self, VAR FUNC state) 0x006E4FD0;
 // Abfrage auf den aktuellen Zustand einer Spielfigur True/False
-FUNC INT	Npc_WasInState				(VAR C_NPC self, VAR FUNC state) { return 0; };
+FUNC INT	Npc_WasInState				(VAR C_NPC self, VAR FUNC state) 0x006E50C0;
 // Abfrage auf den vorherigen Zustand einer Spielfigur True/False
 
 // ---------------------------------------------- TA -----------------------------------------
@@ -748,7 +748,7 @@ FUNC VOID 	AI_ContinueRoutine			(var C_NPC self) 					{ };
 // Setze Tagesablauf fort
 // Enthält Standup
 // -------------------------------------------------------------------------------------------
-FUNC INT	Npc_IsInRoutine				(VAR C_NPC self, VAR FUNC state) { return 0; };
+FUNC INT	Npc_IsInRoutine				(VAR C_NPC self, VAR FUNC state) 0x006E51C0;
 // Check ob der angegebene Zustand der aktuelle TA des NSCs ist. True/FAlse
 FUNC VOID 	Npc_ExchangeRoutine			(VAR C_NPC self, VAR STRING routineName ) {};
 // Tausche meherere Tagesabläufe aus

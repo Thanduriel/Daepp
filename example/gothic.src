@@ -1,12 +1,12 @@
 //scripts\Ikarus.d
 //scripts\vars.dpp
 scripts\constants.dpp
-dpp\externals.dpp
-scripts\classes.dpp
+//dpp\externals.dpp
+//scripts\classes.dpp
 //scripts\functions.dpp
 //scripts\floats.
 
-scripts\ai_constants.d
-scripts\npc_scripts\npc_default.d
-scripts\BAU_911_Elena.d
+//scripts\ai_constants.d
+//scripts\npc_scripts\npc_default.d
+//scripts\BAU_911_Elena.d
 

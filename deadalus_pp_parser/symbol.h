@@ -71,12 +71,17 @@ namespace game{
 
 		size_t size;
 
+		static const int defaultContentInt = 0;
+		static const int defaultContentStr = 0x0000000A;
+
 		virtual void saveContent(std::ofstream& _stream) 
 		{
 			// string vars require a single termination char as content
 			// while int and float want a dword
-			static int defaultContent = 0x0000000A;
-			_stream.write((char*)&defaultContent, type == 3 ? 1 : 4);
+
+			//class members are not initialized
+			if (!testFlag(Flag::Classvar))
+				for (size_t i = 0; i < size; ++i) _stream.write((char*)&defaultContentStr, type == 3 ? 1 : 4);
 
 		};
 
@@ -218,6 +223,12 @@ namespace game{
 		//atom types have elem.size() = 0
 		//since they need an identifier aswell
 		StandardSymbolTable elem;
+
+		virtual void saveContent(std::ofstream& _stream) override
+		{
+			//content[0] where the byte code is found
+			_stream.write((char*)&defaultContentInt, 4);
+		};
 	};
 
 	/* ********************************************* 
