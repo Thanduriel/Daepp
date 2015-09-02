@@ -1,6 +1,8 @@
 #include "compiler.h"
 #include "easylogging++.h"
 
+#define APPEND(a) for (int i = 0; i < a .size(); ++i) allSymbols[c + i] = &(a)[i]; c += m_gameData.(a).size();
+
 namespace par{
 
 	Compiler::Compiler(game::GameData& _gameData)
@@ -8,7 +10,9 @@ namespace par{
 	{
 	}
 
-	int Compiler::compile(const std::string& _outputFile)
+	bool symbolCmp(game::Symbol* _slf, game::Symbol* _oth) { return _slf->id < _oth->id; }
+
+	int Compiler::compile(const std::string& _outputFile, bool _saveInOrder)
 	{
 		fileStream.open(_outputFile, std::ios::out | std::ios::binary);
 
@@ -28,11 +32,87 @@ namespace par{
 		fileStream.write((char*)&symbolCount, 4);
 		//fileStream << (unsigned int)symbolCount;
 
-		compileSortedTable();
-		//for (uint32_t i = 0; i < symbolCount; ++i)
-		//	fileStream.write((char*)&i, 4);
-
+		stackSize = 0;
 		parent = 0xFFFFFFFF;
+
+		if (_saveInOrder)
+		{
+			for (uint32_t i = 0; i < symbolCount; ++i)
+				fileStream.write((char*)&i, 4);
+
+			std::vector < game::Symbol* > allSymbols;
+			allSymbols.resize(symbolCount);
+
+			size_t c = 0;
+
+			for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_symbols[i];
+			c += m_gameData.m_symbols.size();
+			for (int i = 0; i < m_gameData.m_constFloats.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_constFloats[i];
+			c += m_gameData.m_constFloats.size();
+			for (int i = 0; i < m_gameData.m_constInts.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_constInts[i];
+			c += m_gameData.m_constInts.size();
+			for (int i = 0; i < m_gameData.m_constStrings.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_constStrings[i];
+			c += m_gameData.m_constStrings.size();
+
+			for (int i = 0; i < m_gameData.m_functions.size(); ++i)
+			{
+				allSymbols[c] = &m_gameData.m_functions[i];
+
+				c++;
+
+				for (int j = 0; j < m_gameData.m_functions[i].params.size(); ++j)
+					allSymbols[c + j] = &m_gameData.m_functions[i].params[j];
+				c += m_gameData.m_functions[i].params.size();
+				for (int j = 0; j < m_gameData.m_functions[i].locals.size(); ++j)
+					allSymbols[c + j] = &m_gameData.m_functions[i].locals[j];
+				c += m_gameData.m_functions[i].locals.size();
+			}
+
+			for (int i = 11; i < m_gameData.m_types.size(); ++i)
+			{
+				allSymbols[c] = &m_gameData.m_types[i];
+				c++;
+
+				for (int j = 0; j < m_gameData.m_types[i].elem.size(); ++j)
+					allSymbols[c + j] = &m_gameData.m_types[i].elem[j];
+				c += m_gameData.m_types[i].elem.size();
+			}
+
+
+			for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_prototypes[i];
+			c += m_gameData.m_prototypes.size();
+			for (int i = 0; i < m_gameData.m_instances.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_instances[i];
+			c += m_gameData.m_instances.size();
+			for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
+				allSymbols[c + i] = &m_gameData.m_internStrings[i];
+			c += m_gameData.m_internStrings.size();
+
+			std::sort(allSymbols.begin(), allSymbols.begin()+c, symbolCmp);
+
+			for (size_t i = 0; i < allSymbols.size(); ++i)
+			{
+				if (dynamic_cast<game::Symbol_Type*> (allSymbols[i]))
+				{
+					compileClass(*(game::Symbol_Type*)allSymbols[i]);
+					parent = 0xFFFFFFFF;
+				}
+				else if (dynamic_cast<game::Symbol_Function*> (allSymbols[i]))
+				{
+					compileFunction(*(game::Symbol_Function*)allSymbols[i]);
+					parent = 0xFFFFFFFF;
+				}
+				else
+					compileSymbol(*allSymbols[i]);
+			}
+		}
+		/*
+		compileSortedTable();
 
 		// symbols
 		for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
@@ -44,7 +124,6 @@ namespace par{
 		for (int i = 0; i < m_gameData.m_constStrings.size(); ++i)
 			compileSymbol( *(game::Symbol*)&m_gameData.m_constStrings[i]);
 		
-		stackSize = 0;
 		
 		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
 			compileFunction( m_gameData.m_functions[i]);
@@ -62,7 +141,7 @@ namespace par{
 
 		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
 			compileSymbol(*(game::Symbol*)&m_gameData.m_internStrings[i]);
-
+			*/
 		//(int)data stack length
 		fileStream.write((char*)&stackSize, 4);
 
@@ -205,7 +284,7 @@ namespace par{
 			//add name to it
 			_sym.elem[i].name = _sym.name + '.' + _sym.elem[i].name;
 
-			compileSymbol(_sym.elem[i]);
+		//	compileSymbol(_sym.elem[i]);
 		}
 
 		return 0;
@@ -233,14 +312,14 @@ namespace par{
 		{
 			_sym.params[i].name = _sym.name + '.' + _sym.params[i].name;
 
-			compileSymbol(_sym.params[i]);
+		//	compileSymbol(_sym.params[i]);
 		}
 
 		for (int i = 0; i < _sym.locals.size(); ++i)
 		{
 			_sym.locals[i].name = _sym.name + '.' + _sym.locals[i].name;
 
-			compileSymbol(_sym.locals[i]);
+		//	compileSymbol(_sym.locals[i]);
 		}
 
 		return true;

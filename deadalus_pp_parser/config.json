@@ -2,5 +2,7 @@
 	"sourceDir" : "C:\Users\Thanduriel\Documents\Projects\deadalus_pp_parser\example",
 	"outputDir" : "C:\Users\Thanduriel\Documents\Projects\deadalus_pp_parser\example\compiled",
 	"caseSensitive" : false,
-	"alwaysSemikolon" : true
+	"alwaysSemikolon" : true,
+	
+	"saveInOrder" : true
 }

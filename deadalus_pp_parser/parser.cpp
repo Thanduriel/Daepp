@@ -42,6 +42,7 @@ Parser::Parser(const std::string& _configFile)
 
 	m_caseSensitive = config[string("caseSensitive")];
 	m_alwaysSemikolon = config[string("alwaysSemikolon")];
+	m_saveInOrder = config[string("saveInOrder")];
 }
 
 

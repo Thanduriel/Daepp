@@ -41,7 +41,7 @@ public:
 	/* compile() *************************************
 	 * Compiles the parsed data into a (hopefully) by gothic readable .dat
 	 */
-	void compile() { m_compiler.compile("test.dat"); };
+	void compile() { m_compiler.compile("test.dat", m_saveInOrder); };
 
 private:
 	/* Term() *********************************
@@ -116,6 +116,7 @@ private:
 	std::string m_sourceDir;
 	bool m_caseSensitive;
 	bool m_alwaysSemikolon;
+	bool m_saveInOrder;
 
 	std::string m_currentFileName; //< name of the parsed file
 	std::string m_currentFile; //< content of the currently parsed file

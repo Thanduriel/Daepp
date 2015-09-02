@@ -18,7 +18,7 @@ namespace par{
 		 * @param _outputFile the file the code is written to
 		 *
 		 */
-		int compile(const std::string& _outputFile);
+		int compile(const std::string& _outputFile, bool _saveInOrder);
 
 	private:
 		int compileSortedTable();
