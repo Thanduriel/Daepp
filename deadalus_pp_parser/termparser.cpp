@@ -470,7 +470,7 @@ namespace par{
 
 				if (returnSymbol.type != _functionSymbol.returnType) PARSINGERROR("Type mismatch.", tokenOpt);
 
-				//_functionSymbol.byteCode.push_back(game::Instruction::Ret);
+				_functionSymbol.byteCode.push_back(game::Instruction::Ret);
 			}
 			else
 			{

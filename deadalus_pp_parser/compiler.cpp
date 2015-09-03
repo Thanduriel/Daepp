@@ -100,12 +100,10 @@ namespace par{
 				if (dynamic_cast<game::Symbol_Type*> (allSymbols[i]))
 				{
 					compileClass(*(game::Symbol_Type*)allSymbols[i]);
-					parent = 0xFFFFFFFF;
 				}
 				else if (dynamic_cast<game::Symbol_Function*> (allSymbols[i]))
 				{
 					compileFunction(*(game::Symbol_Function*)allSymbols[i]);
-					parent = 0xFFFFFFFF;
 				}
 				else
 					compileSymbol(*allSymbols[i]);
@@ -261,8 +259,8 @@ namespace par{
 	//	}
 
 		//parent
-		tmp = _sym.type > 7 ? m_gameData.m_types[_sym.type].id : parent;
-		fileStream.write((char*)&tmp, 4);
+	//	tmp = _sym.type > 7 ? m_gameData.m_types[_sym.type].id : parent;
+		fileStream.write((char*)&_sym.parent, 4);
 	//	fileStream << (int)0xFFFFFFFF;
 
 		return 0;
@@ -294,6 +292,7 @@ namespace par{
 
 	int Compiler::compileFunction(game::Symbol_Function& _sym)
 	{
+		_sym.size = _sym.params.size();
 		_sym.stackBegin = stackSize;
 
 		//calculate size the code will take
@@ -348,6 +347,19 @@ namespace par{
 		{
 			int opCode = inst.instruction;
 			fileStream.write((char*)&opCode, 1);
+
+			//calls take a direct stack adr as param
+			if (opCode == game::Instruction::call)
+			{
+				for (size_t i = 0; i < m_gameData.m_functions.size(); ++i)
+				{
+					if (m_gameData.m_functions[i].id == inst.param)
+					{
+						inst.param = m_gameData.m_functions[i].stackBegin;
+						break;
+					}
+				}
+			}
 			//optional param
 			if (inst.hasParam) fileStream.write((char*)&inst.param, 4);
 		}

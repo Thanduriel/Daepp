@@ -560,6 +560,11 @@ int Parser::declareInstance()
 		instance.byteCode.emplace_back(game::Instruction::call, m_gameData.m_prototypes[i].id);
 
 		instance.type = m_gameData.m_prototypes[i].type;
+		instance.parent = m_gameData.m_prototypes[i].id;
+	}
+	else
+	{
+		instance.parent = m_gameData.m_types[i].id;
 	}
 
 	TOKEN(ParenthesisRight);
@@ -623,6 +628,9 @@ int Parser::declarePrototype()
 	m_gameData.m_prototypes.emplace(name, i);
 	auto& prototype = m_gameData.m_prototypes.back();
 
+	prototype.type = 6; //type is prototype...
+	prototype.parent = m_gameData.m_types[i].id;
+
 	m_currentNamespace = &m_gameData.m_types[i];
 
 	parseCodeBlock(prototype);
@@ -671,7 +679,10 @@ int Parser::declareClass()
 		ret = declareVar(0, type.elem);
 
 	for (size_t i = 0; i < type.elem.size(); ++i)
+	{
 		type.elem[i].setFlag(game::Flag::Classvar);
+		type.elem[i].parent = type.id;
+	}
 
 	m_gameData.m_types.add(std::move(type));
 

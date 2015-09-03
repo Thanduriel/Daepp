@@ -35,11 +35,12 @@ namespace game{
 	//inherit for more complex structures
 	struct Symbol: public Symbol_Core
 	{
-		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, size_t _size = 1, int _parent = 0)
+		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, size_t _size = 1, int _parent = 0xFFFFFFFF)
 			: name(_name),
 			Symbol_Core(_type),
 			size(_size),
-			flags(_flags)
+			flags(_flags),
+			parent(_parent)
 		{
 			id = idCount++;
 		};
@@ -47,6 +48,7 @@ namespace game{
 		std::string name;
 
 		int id;
+		int parent;
 
 		//all part of one dword-bitfield
 		
