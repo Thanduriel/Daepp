@@ -38,6 +38,7 @@ namespace par{
 		std::ofstream fileStream;
 
 		game::GameData& m_gameData; // reference to the gameData to compile
+		std::vector < game::Symbol_Function* > m_functions;
 
 		int stackSize; //holds the current size of the stack in byte
 

@@ -44,7 +44,8 @@ namespace par{
 			allSymbols.resize(symbolCount);
 
 			size_t c = 0;
-
+			
+			//add all symbols to an array
 			for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
 				allSymbols[c + i] = &m_gameData.m_symbols[i];
 			c += m_gameData.m_symbols.size();
@@ -95,6 +96,7 @@ namespace par{
 
 			std::sort(allSymbols.begin(), allSymbols.begin()+c, symbolCmp);
 
+			//compile in order
 			for (size_t i = 0; i < allSymbols.size(); ++i)
 			{
 				if (dynamic_cast<game::Symbol_Type*> (allSymbols[i]))
@@ -104,6 +106,7 @@ namespace par{
 				else if (dynamic_cast<game::Symbol_Function*> (allSymbols[i]))
 				{
 					compileFunction(*(game::Symbol_Function*)allSymbols[i]);
+					m_functions.push_back((game::Symbol_Function*)allSymbols[i]);
 				}
 				else
 					compileSymbol(*allSymbols[i]);
@@ -328,13 +331,14 @@ namespace par{
 
 	int Compiler::compileStack()
 	{
-
-		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
+		for (int i = 0; i < m_functions.size(); ++i)
+			compileByteCode(m_functions[i]->byteCode);
+/*		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
 			compileByteCode(m_gameData.m_functions[i].byteCode);
 		for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
 			compileByteCode(m_gameData.m_prototypes[i].byteCode);
 		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
-			compileByteCode(m_gameData.m_instances[i].byteCode);
+			compileByteCode(m_gameData.m_instances[i].byteCode);*/
 
 		return 0;
 	}
