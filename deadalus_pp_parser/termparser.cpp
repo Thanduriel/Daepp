@@ -305,7 +305,8 @@ namespace par{
 				//params are only pushed to the stack in non const expressions
 
 				auto returnSym = lang::operators[op.value].toByteCode(*param1, *param0, &op.stackInstruction);
-
+				if (!returnSym)
+					int uodu = 1;
 				if (!returnSym) PARSINGERROR("No operator for the given arguments found.", &op.token);
 
 				// a const value that can be substituted

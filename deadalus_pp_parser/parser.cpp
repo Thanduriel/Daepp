@@ -179,7 +179,12 @@ void Parser::parseSource(const std::string& _fileName)
 		if (!memcmp((char*)&line[endPos], ".d", 2))
 		{
 			for (auto& fileName : names)
-				if (fileName.size()) parseFile(pathLocal + fileName); //parse a code file
+			{
+				if (fileName.size())
+				{
+					if (parseFile(pathLocal + fileName) == -1) return; //parse a code file
+				}
+			}
 		}
 		else if (!memcmp((char*)&line[endPos], ".src", 4))
 		{
@@ -559,7 +564,13 @@ int Parser::declareInstance()
 		//init function starts with a call to its prototype
 		instance.byteCode.emplace_back(game::Instruction::call, m_gameData.m_prototypes[i].id);
 
-		instance.type = m_gameData.m_prototypes[i].type;
+		for (size_t j = 0; j < m_gameData.m_types.size(); ++j)
+		{
+			if (m_gameData.m_types[j].id == m_gameData.m_prototypes[i].parent)
+			{
+				instance.type = j;
+			}
+		}
 		instance.parent = m_gameData.m_prototypes[i].id;
 	}
 	else
@@ -589,6 +600,7 @@ int Parser::declareInstance()
 				m_lexer.prev();
 		}
 	}
+
 
 	if (names.size() > 1)
 		for (int i = 1; i < names.size(); ++i)

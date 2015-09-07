@@ -222,6 +222,7 @@
     <ClInclude Include="basictypes.h" />
     <ClInclude Include="compiler.h" />
     <ClInclude Include="easylogging++.h" />
+    <ClInclude Include="fusedcontainer.h" />
     <ClInclude Include="gamedata.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="parser.h" />

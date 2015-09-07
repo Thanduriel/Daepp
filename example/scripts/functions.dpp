@@ -1,7 +1,7 @@
 //functions
 const string bla = "lololol";
 
-func int someExternal(var string name, var int count) 0x00FFFFFF;
+//func int someExternal(var string name, var int count) 0x00FFFFFF;
 
 /*current outputQue:
 int 		test			|
@@ -12,26 +12,6 @@ mul					|	|
 call					|	|
 assign						|
 */
-/*
-func void foo()
-{
-	var int test;
-	
-	test = 42;
-	
-	test = someExternal(bla, 2 * test);
-};*/
-
-func int compilerHelperFunc(var int a, var string name, var C_Npc char)
-{
-	return a + 5;
-};
-
-/*
- things to add:
- sign +,-
- assignOps +=,...
-*/
 
 func int floatCall(var float param)
 {
@@ -39,6 +19,21 @@ func int floatCall(var float param)
 	floatCall(0.8); //with a float
 };
 
+func void foo()
+{
+	var int test;
+	test = 42;
+	
+//	test = someExternal(bla, 2 * test);
+};
+var int test03;
+/*
+func int compilerHelperFunc(var int a, var string name, var C_Npc char)
+{
+	return a + 5;
+};
+
+/*
 func void compilerTestFunction()
 {
 	//assignment for all relevant types
