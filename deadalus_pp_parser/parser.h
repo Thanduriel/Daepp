@@ -123,9 +123,11 @@ private:
 	//size_t m_pp; //<parser pointer
 	int m_lineCount; //< current line
 
-
+	//linker stuff
+	//and stack simulation
 	game::Symbol_Type* m_currentNamespace;
 	game::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
+	int m_thisInst; //< instance id that occupies the this-pointer in the current code
 	//resolved content
 	game::GameData m_gameData;
 };

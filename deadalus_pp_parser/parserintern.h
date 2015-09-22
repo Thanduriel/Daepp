@@ -1,7 +1,6 @@
 #pragma once
 
-#include "symboltable.h"
-#include "symbol.h"
+#include "symbolext.h"
 #include "lexer.h"
 
 //data structures with wich the parser works
@@ -21,6 +20,8 @@
 #define TOKENEXT(type, tokenPtr) Token* tokenPtr = m_lexer.nextToken(); NULLCHECK(tokenPtr); if(*tokenPtr != type) PARSINGERROR("Unexpected token.",tokenPtr)
 #define TOKENOPT(type) (((tokenOpt = m_lexer.nextToken()) && *tokenOpt == type))
 
+//the standard check for ';' that takes into account the setting "alwaysSemikolon"
+#define SEMIKOLON if (!TOKENOPT(End)){if (m_alwaysSemikolon){PARSINGERROR("End';' expected.", tokenOpt);}else m_lexer.prev();}
 
 /* Array *************
  * A simple dynamic buffer with size = capacity
@@ -102,11 +103,11 @@ namespace par{
 	};
 
 
-	class UndeclaredSymbol : public game::Symbol_Function
+	class UndeclaredSymbol : public game::Symbol
 	{
 	public:
 		UndeclaredSymbol(const std::string& _name, Token& _token) :
-			Symbol_Function(_name, 0),
+			Symbol(_name, false),
 			token(_token)
 		{}
 
@@ -114,7 +115,7 @@ namespace par{
 		//required to allow std::vector::erase
 		//does only copying since an UndeclaredSymbol does not possess any dynamic data beside its name
 		UndeclaredSymbol(UndeclaredSymbol&& _other): 
-			Symbol_Function(_other),
+			Symbol(_other),
 			token(_other.token)
 		{ }
 

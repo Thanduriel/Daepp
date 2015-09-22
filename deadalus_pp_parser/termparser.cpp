@@ -105,6 +105,7 @@ namespace par{
 							functionSymbols.push_back(&m_gameData.m_functions[i]);
 							operatorStack.push_back(new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token));
 
+							//push the parenthese to save one iteration
 							operatorStack.emplace_back((MathSymbol*)nullptr);
 						}
 						//function as param
@@ -129,10 +130,27 @@ namespace par{
 					{
 						outputQue.push_back(&(m_currentNamespace->elem[i]));
 					}
+					//a member var
+					else if (operatorStack.size() && operatorStack.back() && operatorStack.back()->value == 2)
+					{
+						size_t j = outputQue.back()->type;
+						i = m_gameData.m_types[j].elem.find(str);
+						if (i != -1)
+						{
+							//the correct this pointer is set by pushParamInstr
+							//remove the instance name
+							outputQue.pop_back();
+							//remove '.'
+							operatorStack.pop_back();
+							outputQue.push_back(&(m_gameData.m_types[j].elem[i]));
+						}
+						else PARSINGERROR(m_gameData.m_types[j].name + " has no member with this name.", token);
+					}
 					// inside a file declarations can apear after a symbol is used
 					else
 					{
 						m_undeclaredSymbols.emplace(str, *token);
+						m_undeclaredSymbols.back().type = 5;
 						outputQue.push_back(&m_undeclaredSymbols.back());
 					}
 				}
@@ -273,7 +291,7 @@ namespace par{
 					paramStack--;
 					
 					if (!verifyParam(func.params[i], *(*paramStack)))
-						PARSINGERROR("No overload with the given arguments found.", &op.token);;
+						PARSINGERROR("No overload with the given arguments found.", &op.token);
 				}
 
 				auto firstParam = paramStack;
@@ -392,10 +410,24 @@ namespace par{
 
 	int Parser::pushParamInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack)
 	{
+		//consts
+
+		if (_sym->type == 8)
+		{
+			_instrStack.emplace_back(game::Instruction::pushInt, ((game::DummyInt*)_sym)->value);
+			return 0;
+		}
+
+		game::Symbol& sym = *(game::Symbol*)_sym;
+
+		if (sym.testFlag(game::Flag::Classvar) && sym.parent != m_thisInst)
+		{
+			_instrStack.emplace_back(game::Instruction::setInst, sym.parent);
+		}
+
 		//array
 		if (_sym->type == 2)
 		{
-			game::Symbol& sym = *(game::Symbol*)_sym;
 			if (sym.size > 1)
 			{
 				_instrStack.emplace_back(game::Instruction::pushArray, ((game::Symbol*)_sym)->id);
@@ -421,10 +453,6 @@ namespace par{
 
 		case 7:
 			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym)->id);
-			break;
-
-		case 8:
-			_instrStack.emplace_back(game::Instruction::pushInt, ((game::DummyInt*)_sym)->value);
 			break;
 		default: 
 			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym)->id);
@@ -485,6 +513,11 @@ namespace par{
 
 		if (*tokenOpt != CurlyBracketRight) PARSINGERROR("Expected token '}'.", tokenOpt);
 
+		SEMIKOLON;
+
+		//reset the thisInst
+		m_thisInst = -1;
+
 		return 0;
 	}
 
@@ -543,8 +576,9 @@ namespace par{
 
 	bool Parser::verifyParam(game::Symbol& _expected, game::Symbol_Core& _found)
 	{
+		if (_expected.type == _found.type) return true;
 		//float params
-		if (_expected.type == 1 && (_found.type == 8 || _found.type == 9))
+		else if (_expected.type == 1 && (_found.type == 8 || _found.type == 9))
 		{
 			//dirty hack
 			//results into a pointer typecast of the value
@@ -552,12 +586,13 @@ namespace par{
 
 			return true;
 		}
-		//int params can be filled by a const int aswell
+		//int params can be filled by a const int and instances
+		else if (_expected.type == 2 && (_found.type == 8 || _found.type == 7 || _found.type > 10)) return true;
+		//and any instance
 		//default instance(7) is valid with any kind of instance params
-		else if (_expected.type != _found.type && (_expected.type != 2 || _found.type != 8)
-			&& (_expected.type != 7 || _found.type <= 10))
-			return false;
-		return true;
+		else if (_expected.type == 7 && _found.type > 10) return true;
+
+		return false;
 	}
 
 }

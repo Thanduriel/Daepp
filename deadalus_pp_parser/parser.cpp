@@ -385,7 +385,8 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		//type decides how to parse
 		if (index == 2)
 		{
-			game::ConstSymbol<int, 2> constSymbol(word, arraySize);
+			m_gameData.m_constInts.emplace(word, arraySize);
+			game::ConstSymbol<int, 2>& constSymbol = m_gameData.m_constInts.back();
 			constSymbol.value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
@@ -396,11 +397,11 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
-			m_gameData.m_constInts.add(std::move(constSymbol));
 		}
 		else if (index == 1)
 		{
-			game::ConstSymbol<float, 1> constSymbol(word, arraySize);
+			m_gameData.m_constFloats.emplace(word, arraySize);
+			game::ConstSymbol<float, 1>& constSymbol = m_gameData.m_constFloats.back();
 			constSymbol.value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
@@ -411,11 +412,11 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
-			m_gameData.m_constFloats.add(std::move(constSymbol));
 		}
 		else if (index == 3)
 		{
-			game::ConstSymbol_String constSymbol(word, arraySize);
+			m_gameData.m_constStrings.emplace(word, arraySize);
+			game::ConstSymbol_String& constSymbol = m_gameData.m_constStrings.back();
 			constSymbol.value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
@@ -424,7 +425,6 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 				constSymbol.value[i] = std::move(m_lexer.getWord(*strToken));
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
-			m_gameData.m_constStrings.add(std::move(constSymbol));
 		}
 		else PARSINGERROR("Only int, float and string can be const.", typeToken);
 
@@ -450,8 +450,8 @@ int Parser::declareFunc()
 	int j = m_undeclaredSymbols.find(name);
 	if (j != -1)
 	{
-		m_undeclaredSymbols[j].returnType = getType(*typeToken);
-		m_gameData.m_functions.add(m_undeclaredSymbols[j]);
+		m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken), m_undeclaredSymbols[j]);
+
 		m_undeclaredSymbols.erase(j);
 	}
 	else
@@ -496,7 +496,6 @@ int Parser::declareFunc()
 	{
 		TOKEN(End);
 		functionSymbol.addFlag(game::Flag::External);
-		m_gameData.m_functions.add(functionSymbol);
 		return 0;
 	}
 
@@ -507,7 +506,7 @@ int Parser::declareFunc()
 	//code block
 	parseCodeBlock(functionSymbol);
 	
-	if (!TOKENOPT(End))
+/*	if (!TOKENOPT(End))
 	{
 		if (m_alwaysSemikolon)
 		{
@@ -515,7 +514,7 @@ int Parser::declareFunc()
 		}
 		else //read token is part of the next declaration
 			m_lexer.prev();
-	}
+	}*/
 
 	//always end with a return
 	//for some reason gothic even ends with two rets 
@@ -553,7 +552,8 @@ int Parser::declareInstance()
 
 	//type does not matter when it is derivated from a prototype or not existent
 	//thus the check may happen afterwards
-	game::Symbol_Instance instance(names[0], i);
+	m_gameData.m_instances.emplace(names[0], i);
+	game::Symbol_Instance& instance = m_gameData.m_instances.back();
 
 	if (i == -1)
 	{
@@ -585,12 +585,13 @@ int Parser::declareInstance()
 		m_lexer.prev();
 
 		m_currentNamespace = &m_gameData.m_types[instance.type];
+		m_thisInst = instance.parent;
 
 		parseCodeBlock(instance);
 
 		m_currentNamespace = nullptr;
 
-		if (!TOKENOPT(End))
+	/*	if (!TOKENOPT(End))
 		{
 			if (m_alwaysSemikolon)
 			{
@@ -598,18 +599,24 @@ int Parser::declareInstance()
 			}
 			else //read token is part of the next declaration
 				m_lexer.prev();
+		}*/
+
+		//instances with a body have the const flag
+		instance.addFlag(game::Flag::Const);
+
+		//every use of self is subsituted with a this-reference
+		for (auto& instr : instance.byteCode)
+		{
+			if (instr.instruction == game::Instruction::pushInst)
+				instr.param = instance.id;
 		}
 	}
-
 
 	if (names.size() > 1)
 		for (int i = 1; i < names.size(); ++i)
 		{
 			m_gameData.m_instances.emplace(names[i], instance);
 		}
-
-	//try moving after the references are not needed anymore
-	m_gameData.m_instances.add(std::move(instance));
 
 	return 0;
 }
@@ -643,13 +650,15 @@ int Parser::declarePrototype()
 	prototype.type = 6; //type is prototype...
 	prototype.parent = m_gameData.m_types[i].id;
 
+	// init the stack state
 	m_currentNamespace = &m_gameData.m_types[i];
+	m_thisInst = prototype.parent;
 
 	parseCodeBlock(prototype);
 
 	m_currentNamespace = nullptr;
 
-	if (!TOKENOPT(End))
+/*	if (!TOKENOPT(End))
 	{
 		if (m_alwaysSemikolon)
 		{
@@ -657,7 +666,7 @@ int Parser::declarePrototype()
 		}
 		else //read token is part of the next declaration
 			m_lexer.prev();
-	}
+	}*/
 
 	return 0;
 }
@@ -683,7 +692,8 @@ int Parser::declareClass()
 		PARSINGERROR("Curly Bracket '{' expected.", token);
 	}
 
-	game::Symbol_Type type(word);
+	m_gameData.m_types.emplace(word);
+	game::Symbol_Type& type = m_gameData.m_types.back();
 
 	int ret = 0;
 	//parse all members
@@ -695,8 +705,6 @@ int Parser::declareClass()
 		type.elem[i].setFlag(game::Flag::Classvar);
 		type.elem[i].parent = type.id;
 	}
-
-	m_gameData.m_types.add(std::move(type));
 
 	if (ret == -1) return -1;
 

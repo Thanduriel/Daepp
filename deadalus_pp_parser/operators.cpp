@@ -54,4 +54,11 @@ namespace lang{
 
 		return (*it).second(_operand0, _operand1, _stack);
 	}
+
+	// **************************************************** //
+
+	unsigned int Operator::generateKey(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1)
+	{
+		return (_operand1->type > 10 ? 7 : _operand1->type) | ((_operand0->type > 10 ? 7 : _operand0->type) << 16);
+	}
 }

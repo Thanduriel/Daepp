@@ -40,13 +40,13 @@ namespace par{
 			for (uint32_t i = 0; i < symbolCount; ++i)
 				fileStream.write((char*)&i, 4);
 
-			std::vector < game::Symbol* > allSymbols;
-			allSymbols.resize(symbolCount);
+		//	std::vector < game::Symbol* > allSymbols;
+		//	allSymbols.resize(symbolCount);
 
 			size_t c = 0;
 			
 			//add all symbols to an array
-			for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
+/*			for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
 				allSymbols[c + i] = &m_gameData.m_symbols[i];
 			c += m_gameData.m_symbols.size();
 			for (int i = 0; i < m_gameData.m_constFloats.size(); ++i)
@@ -94,22 +94,24 @@ namespace par{
 				allSymbols[c + i] = &m_gameData.m_internStrings[i];
 			c += m_gameData.m_internStrings.size();
 
-			std::sort(allSymbols.begin(), allSymbols.begin()+c, symbolCmp);
+			std::sort(allSymbols.begin(), allSymbols.begin()+c, symbolCmp);*/
 
 			//compile in order
-			for (size_t i = 0; i < allSymbols.size(); ++i)
+			for (size_t i = 0; i < game::Symbol::idCount; ++i)
 			{
-				if (dynamic_cast<game::Symbol_Type*> (allSymbols[i]))
+				game::Symbol* symbol = &game::Symbol::getById(i);
+
+				if (dynamic_cast<game::Symbol_Type*> (symbol))
 				{
-					compileClass(*(game::Symbol_Type*)allSymbols[i]);
+					compileClass(*(game::Symbol_Type*)symbol);
 				}
-				else if (dynamic_cast<game::Symbol_Function*> (allSymbols[i]))
+				else if (dynamic_cast<game::Symbol_Function*> (symbol))
 				{
-					compileFunction(*(game::Symbol_Function*)allSymbols[i]);
-					m_functions.push_back((game::Symbol_Function*)allSymbols[i]);
+					compileFunction(*(game::Symbol_Function*)symbol);
+					m_functions.push_back((game::Symbol_Function*)symbol);
 				}
 				else
-					compileSymbol(*allSymbols[i]);
+					compileSymbol(*symbol);
 			}
 		}
 		/*
@@ -353,16 +355,10 @@ namespace par{
 			fileStream.write((char*)&opCode, 1);
 
 			//calls take a direct stack adr as param
-			if (opCode == game::Instruction::call)
+			// array indecies can be mistaken for call instructions but have hasParam=false
+			if (opCode == game::Instruction::call && inst.hasParam)
 			{
-				for (size_t i = 0; i < m_gameData.m_functions.size(); ++i)
-				{
-					if (m_gameData.m_functions[i].id == inst.param)
-					{
-						inst.param = m_gameData.m_functions[i].stackBegin;
-						break;
-					}
-				}
+				inst.param = ((game::Symbol_Function*)&game::Symbol::getById(inst.param))->stackBegin;
 			}
 			//optional param
 			if (inst.hasParam) fileStream.write((char*)&inst.param, 4);

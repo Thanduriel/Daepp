@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <deque>
 #include <initializer_list>
 
 namespace game{
@@ -79,7 +80,7 @@ public:
 		return m_elem.back();
 	}
 private:
-	std::vector< _T > m_elem;
+	std::deque< _T > m_elem;
 };
 
 }//end namespace

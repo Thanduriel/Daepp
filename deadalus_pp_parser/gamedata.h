@@ -1,4 +1,6 @@
-#include "symbol.h"
+#include "symbolext.h"
+#include <deque>//currently based on this datastructure
+//todo test performance with: vector, deque, list?
 
 namespace game{
 
@@ -23,6 +25,6 @@ namespace game{
 		game::SymbolTable< game::Symbol_Instance > m_prototypes;
 
 		//not a SymbolTable since their names are generated and thus not an identifier
-		std::vector< game::ConstSymbol_String > m_internStrings;
+		std::deque< game::ConstSymbol_String > m_internStrings;
 	};
 }

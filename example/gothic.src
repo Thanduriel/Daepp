@@ -1,15 +1,13 @@
-//scripts\Ikarus.d
-//scripts\vars.dpp
 scripts\constants.dpp
 dpp\externals.dpp
 scripts\classes.dpp
-//scripts\functions.dpp
-//scripts\floats.
 
 scripts\ai_constants.d
-scripts\npc_scripts\npc_default.d
+scripts\npc_scripts\*.d
 scripts\BAU_911_Elena.d
+//scripts\bla_912_test.d
 //parse something afterwards
 //because of a bug in a loop of decdat
-scripts\vars.dpp
+//scripts\vars.dpp
+//scripts\functions.dpp
 

@@ -5,7 +5,7 @@
 #include <functional>
 #include <unordered_map>
 
-#include "symbol.h"
+#include "symbolext.h"
 
 #define MAKEKEY(a,b) (a | (b << 16))
 
@@ -49,10 +49,7 @@ namespace lang{
 		game::Symbol_Core* toByteCode(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, std::vector< game::StackInstruction >* _stack = nullptr);
 	
 	private:
-		inline unsigned int generateKey(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1)
-		{
-			return (_operand1->type > 10 ? 7 : _operand1->type) | ((_operand0->type > 10 ? 7 : _operand0->type) << 16);
-		}
+		inline unsigned int generateKey(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1);
 
 		std::unordered_map < unsigned int, OperatorFunction > overloads;
 
@@ -69,17 +66,14 @@ namespace lang{
 			{ 0x00070002, [](OPPARAMLIST)
 			{
 				//correction as access to member does not use the stack
-				(*_stack)[_stack->size() - 2].instruction = game::Instruction::setInst;
-				return nullptr;
+			//	(*_stack)[_stack->size() - 2].instruction = game::Instruction::setInst;
+				return new game::Symbol_Core(2);
 			} },
-			{ 0x00020008, [](OPPARAMLIST)
+			{ 0x00070003, [](OPPARAMLIST)
 			{
-			/*	_stack.emplace_back(game::Instruction::pushVar, _operand0->id);
-				auto* operand1 = (game::ConstSymbol < int, 8 >*)(_operand1);
-				_stack.emplace_back(game::Instruction::pushInt, operand1->value[0]);
-				_stack.emplace_back(game::Instruction::And);
-				*/
-				return nullptr;
+				//correction as access to member does not use the stack
+			//	(*_stack)[_stack->size() - 2].instruction = game::Instruction::setInst;
+				return new game::Symbol_Core(3);
 			} }
 		}),
 		Operator("+", 6, LtR, 2,game::Instruction::Add,
@@ -178,6 +172,12 @@ namespace lang{
 				_stack->emplace_back(game::Instruction::assign);
 
 				return new game::Symbol_Core(2);
+			} },
+			{ 0x00010009, [](OPPARAMLIST)
+			{
+				_stack->emplace_back(game::Instruction::assignFloat);
+
+				return new game::Symbol_Core(1);
 			} },
 			{ 0x00030003, [](OPPARAMLIST)
 			{
