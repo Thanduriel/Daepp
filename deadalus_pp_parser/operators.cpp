@@ -38,7 +38,7 @@ namespace lang{
 	};
 
 
-	game::Symbol_Core* Operator::toByteCode(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, std::vector< game::StackInstruction >* _stack)
+	game::Symbol_Core* Operator::toByteCode(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, game::ByteCodeStack* _stack)
 	{
 		auto it = overloads.find(generateKey(_operand0, _operand1));
 

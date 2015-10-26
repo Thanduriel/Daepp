@@ -3,22 +3,29 @@
 #include <vector>
 #include <deque>
 #include <initializer_list>
+#include <memory>
 
-namespace game{
+namespace utils{
 
 
-
+	/* SymbolTable *******************************************
+	 * A container managing symbols with unique names.
+	 */
 template < typename _T >
 class SymbolTable
 {
 public:
-	/* constructor() **************************
-	 * fast one
+	/* SymbolTable() **************************
+	 * fast constructor
 	 */
 	SymbolTable(){};
 	/* takes an initializer_list to init with its values
 	 */
-	SymbolTable(std::initializer_list< _T >& _init): m_elem(_init){};
+	SymbolTable(std::initializer_list< _T* >& _init)
+	{
+		for (auto* ty : _init)
+			m_elem.emplace_back(ty);
+	};
 	~SymbolTable(){};
 	
 	/* add() ************************
@@ -26,26 +33,28 @@ public:
 	 * returns false when one with the same name already exists
 	 */
 	template< typename _Name, typename... _ArgsR >
-	bool emplace(_Name _name, _ArgsR&&... _argsR)
+	bool emplace(_Name& _name, _ArgsR&&... _argsR)
 	{
-		for (auto& _el : m_elem)
-			if (_el.name == _name)
+		for (auto& name : m_names)
+			if (name == _name)
 				return false;
-		m_elem.emplace_back(_name, std::forward< _ArgsR >(_argsR)...);
+		m_elem.emplace_back(new _T(_name, std::forward< _ArgsR >(_argsR)...));
+		m_names.push_back(_name);
 		return true;
 	};
 
-	bool add(_T& _sym)
+	bool add(_T* _sym)
 	{
-		for (auto& el : m_elem)
-			if (el.name == _sym.name)
+		for (auto& name : m_names)
+			if (name == _sym->name)
 				return false;
 
-		//try using the move constructor
-		m_elem.push_back(std::move(_sym));
+		m_elem.emplace_back(_sym);
+		m_names.push_back(_sym->name);
 
 		return true;
 	};
+
 
 	void erase(size_t _i)
 	{
@@ -60,16 +69,29 @@ public:
 	int find(const std::string& _name)
 	{
 		for (int i = 0; i < m_elem.size(); ++i)
-			if (m_elem[i].name == _name) return i;
+			if (m_names[i] == _name) return i;
 
 		return -1;
 	};
 
+	/* nameNotInUse() ***************
+	 * checks whether a symbol with this name already exists
+	 * without adding it to the table
+	 * Use this to verify vars in local namespaces
+	 * @return true if not found
+	 */
+	bool nameNotInUse(const std::string& _name)
+	{
+		return -1 == find(_name);
+	}
+
+	//direct access
 	_T& operator[](size_t _i)
 	{
-		return m_elem[_i];
+		return *m_elem[_i];
 	};
 
+	//count of elements
 	inline size_t size()
 	{
 		return m_elem.size();
@@ -77,10 +99,11 @@ public:
 
 	_T& back()
 	{
-		return m_elem.back();
+		return *m_elem.back();
 	}
 private:
-	std::deque< _T > m_elem;
+	std::deque< std::unique_ptr< _T > > m_elem;
+	std::vector < std::string > m_names; //todo test vs no extra string table
 };
 
 }//end namespace

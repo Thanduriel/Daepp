@@ -21,8 +21,6 @@ namespace par{
 		int compile(const std::string& _outputFile, bool _saveInOrder);
 
 	private:
-		int compileSortedTable();
-
 		//writes a single given symbol to the stream
 		int compileSymbol( game::Symbol& _sym);
 
@@ -33,7 +31,7 @@ namespace par{
 		
 		int compileStack();
 
-		void compileByteCode(std::vector< game::StackInstruction >& _byteCode);
+		void compileByteCode(game::ByteCodeStack& _byteCode, unsigned int _offset);
 
 		std::ofstream fileStream;
 
@@ -43,6 +41,7 @@ namespace par{
 		int stackSize; //holds the current size of the stack in byte
 
 		unsigned int parent; // parent of the currently written symbol
+		unsigned int offset; // offset of the currently written symbol
 	};
 
 }

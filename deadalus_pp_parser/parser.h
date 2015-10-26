@@ -44,6 +44,10 @@ public:
 	void compile() { m_compiler.compile("test.dat", m_saveInOrder); };
 
 private:
+	/* preCompilerDirective() *****************************
+	 * Parses a pre directive and sets the required switches to process it
+	 */
+	void preDirective(const std::string& _directive);
 	/* Term() *********************************
 	* reads a mathematical term from the tokenstream
 	* @param _value the calculated value of the term
@@ -52,9 +56,9 @@ private:
 	*/
 	int Term(game::Symbol_Core* _ret = nullptr, game::Symbol_Function* _function = nullptr);
 
-	int pushInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack);
+	int pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
 
-	inline int pushParamInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack);
+	inline int pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
 
 	//pushes the code that assigns the values on the stack to the function params
 	void assignFunctionParam(game::Symbol_Function& _func);
@@ -63,7 +67,8 @@ private:
 	* @return true when the types match
 	* takes into account implicit typecast and consts
 	*/
-	bool verifyParam(game::Symbol& _expected, game::Symbol_Core& _found);
+	bool verifyParam(game::Symbol& _expected, game::Symbol_Core& _found) { return verifyParam(_expected.type, _found.type); };
+	bool verifyParam(int _expected, int _found);
 
 	/* parseInstruction() ***********************
 	* reads code from the tokenstream and translates it to bytecode
@@ -73,13 +78,18 @@ private:
 	int parseCodeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol);
 	int parseCodeBlock(game::Symbol_Function& _functionSymbol) { return parseCodeBlock(*m_lexer.nextToken(), _functionSymbol); };
 
+	/* conditionalBlock() ***************************
+	 * parses a conditional structure started by a "if"
+	 */
+	int conditionalBlock(game::Symbol_Function& _functionSymbol);
+
 	/* declareVar() *********************************
 	 * reads the type and adds the symbol to the table
 	 * @param _const declares a constant whichs value cannot be changed after init
 	 * @param _table the SymbolTable the symbol should be added to
 	 * @return parsing error code
 	 */
-	int declareVar(bool _const, game::SymbolTable< game::Symbol >& _table);
+	int declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table);
 
 	/* declareFunc() ********************************
 	 */
@@ -117,16 +127,23 @@ private:
 	bool m_caseSensitive;
 	bool m_alwaysSemikolon;
 	bool m_saveInOrder;
+	bool m_showCodeSegmentOnError;
 
+	//config set by precompiler directives
+	bool m_parseInOrder;
+
+	//state vars
 	std::string m_currentFileName; //< name of the parsed file
 	std::string m_currentFile; //< content of the currently parsed file
-	//size_t m_pp; //<parser pointer
+	bool m_isCodeParsing; //< currently in code parsing mode
+	
 	int m_lineCount; //< current line
 
 	//linker stuff
 	//and stack simulation
 	game::Symbol_Type* m_currentNamespace;
-	game::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
+	utils::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
+	std::vector< CodeToParse > m_codeQue;
 	int m_thisInst; //< instance id that occupies the this-pointer in the current code
 	//resolved content
 	game::GameData m_gameData;

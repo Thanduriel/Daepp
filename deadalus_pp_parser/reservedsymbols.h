@@ -10,7 +10,7 @@
 #define MAKEKEY(a,b) (a | (b << 16))
 
 //operator param list
-#define OPPARAMLIST game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, std::vector< game::StackInstruction >* _stack
+#define OPPARAMLIST game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, game::ByteCodeStack* _stack
 
 //generic const float and int operations
 // with a beeing the operation in c++
@@ -24,7 +24,7 @@ namespace lang{
 		RtL
 	};
 
-	typedef std::function< game::Symbol_Core* (game::Symbol_Core*, game::Symbol_Core*, std::vector< game::StackInstruction >*)> OperatorFunction;
+	typedef std::function< game::Symbol_Core* (game::Symbol_Core*, game::Symbol_Core*, game::ByteCodeStack*)> OperatorFunction;
 
 
 	struct Operator
@@ -46,7 +46,7 @@ namespace lang{
 		int paramCount; //amount of params the operator has
 
 		// @return a dummy symbol that contains the resulting type of the operation and, when inlined the value
-		game::Symbol_Core* toByteCode(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, std::vector< game::StackInstruction >* _stack = nullptr);
+		game::Symbol_Core* toByteCode(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1, game::ByteCodeStack* _stack = nullptr);
 	
 	private:
 		inline unsigned int generateKey(game::Symbol_Core* _operand0, game::Symbol_Core* _operand1);
@@ -55,7 +55,7 @@ namespace lang{
 
 	};
 
-	const unsigned int operatorCount = 26;
+	const unsigned int operatorCount = 27;
 
 	static std::array<Operator, operatorCount> operators =
 	{
@@ -65,14 +65,10 @@ namespace lang{
 		{
 			{ 0x00070002, [](OPPARAMLIST)
 			{
-				//correction as access to member does not use the stack
-			//	(*_stack)[_stack->size() - 2].instruction = game::Instruction::setInst;
 				return new game::Symbol_Core(2);
 			} },
 			{ 0x00070003, [](OPPARAMLIST)
 			{
-				//correction as access to member does not use the stack
-			//	(*_stack)[_stack->size() - 2].instruction = game::Instruction::setInst;
 				return new game::Symbol_Core(3);
 			} }
 		}),
@@ -133,12 +129,18 @@ namespace lang{
 				return new game::DummyInt(operand0->value >> operand1->value);
 			} }
 		}),
-		Operator("<", 8, LtR, 2),
-		Operator(">", 8, LtR, 2),
-		Operator("<=", 8, LtR, 2),
-		Operator(">=", 8, LtR, 2),
+		Operator("<", 8, LtR, 2, game::Instruction::Less,
+		{
+			CONSTOPERATION(<)
+		}),
+		Operator(">", 8, LtR, 2, game::Instruction::Higher,
+		{
+			CONSTOPERATION(>)
+		}),
+		Operator("<=", 8, LtR, 2,game::Instruction::leq),
+		Operator(">=", 8, LtR, 2,game::Instruction::heg),
 		Operator("==", 9, LtR, 2, game::Instruction::eq),
-		Operator("!=", 9, LtR, 2),
+		Operator("!=", 9, LtR, 2, game::Instruction::neq),
 		Operator("&", 10, LtR, 2),
 		Operator("^", 11, LtR, 2),
 		Operator("|", 12, LtR, 2, game::Instruction::Or,
@@ -195,6 +197,21 @@ namespace lang{
 		Operator("+=", 15, RtL, 2, game::Instruction::assignAdd),
 		Operator("-=", 15, RtL, 2, game::Instruction::assignSub),
 		Operator("*=", 15, RtL, 2, game::Instruction::assignMul),
-		Operator("/=", 15, RtL, 2, game::Instruction::assignDiv)
+		Operator("/=", 15, RtL, 2, game::Instruction::assignDiv),
+		Operator("u", 2, LtR, 1, game::Instruction::uMinus,
+		{
+			{ 0x00080008, [](OPPARAMLIST)
+			{
+				auto* operand0 = (game::DummyInt*)(_operand0);
+
+				return new game::DummyInt(-operand0->value);
+			} },
+			{ 0x00090009, [](OPPARAMLIST)
+			{
+				auto* operand0 = (game::DummyFloat*)(_operand0);
+
+				return new game::DummyFloat(-operand0->value);
+			} }
+		})
 	};
 }

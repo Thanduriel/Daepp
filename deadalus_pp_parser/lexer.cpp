@@ -153,6 +153,14 @@ void Lexer::analyse()
 				if (m_text[i + 1] == m_text[i] || m_text[i + 1] == '=')
 					i++;
 
+				//check for an unary minus
+				auto it = m_tokens.end(); it--;
+				//can not be an operator if not precedied by a symbol or constant
+				if (m_text[i] == '-' && it->type != TokenType::Constant && it->type != TokenType::Symbol)
+				{
+					m_text[i] = 'u'; // u for unary minus
+				}
+
 				m_tokens.emplace_back(TokenType::Operator, begin, i);
 			}
 		}
@@ -188,17 +196,11 @@ void Lexer::analyse()
 				i--;
 
 				//check previous tokens as it might be a minus sign
-				if (i >= 0 && m_text[begin - 1] == '-')
+				if (m_text[m_tokens.back().begin] == 'u')
 				{
-					std::list < Token >::iterator it = m_tokens.end();
-					--it;
-					//check whether it is a operator in this case
-					if (it->type != TokenType::Constant && it->type != TokenType::Symbol)
-					{
-						//add the sign to the token
-						begin--;
-						m_tokens.pop_back();
-					}
+					//add the sign to the token
+					begin--;
+					m_tokens.pop_back();
 				}
 				//contains a '.' -> float
 				m_tokens.emplace_back(count ? TokenType::ConstFloat : TokenType::ConstInt, begin, i);

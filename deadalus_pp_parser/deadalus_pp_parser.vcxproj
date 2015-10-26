@@ -291,12 +291,14 @@
     <ClInclude Include="lexer.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="parserintern.h" />
+    <ClInclude Include="refcontainer.h" />
     <ClInclude Include="reservedsymbols.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="symbol.h" />
     <ClInclude Include="symbolext.h" />
     <ClInclude Include="symboltable.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compiler.cpp" />
@@ -307,6 +309,7 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="symbol.cpp" />
     <ClCompile Include="termparser.cpp" />
+    <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

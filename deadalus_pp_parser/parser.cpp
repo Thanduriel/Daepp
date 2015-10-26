@@ -6,15 +6,16 @@
 #include "easylogging++.h"//https://github.com/easylogging/easyloggingpp#logging
 #include "dirent.h"
 
+#include "utils.h"
 #include "parser.h"
 #include "basictypes.h"
 #include "jofilelib.hpp"
 #include "reservedsymbols.h"
 
-//stupid intelli, there is nothing wrong here
 _INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
+using namespace game;
 
 namespace par{
 
@@ -22,7 +23,8 @@ Parser::Parser(const std::string& _configFile)
 	:m_lexer(m_currentFile),
 	m_gameData(lang::basicTypes),
 	m_compiler(m_gameData),
-	m_currentNamespace(nullptr)
+	m_currentNamespace(nullptr),
+	m_isCodeParsing(false)
 {
 	LOG(INFO) << "Parser created.";
 
@@ -41,8 +43,9 @@ Parser::Parser(const std::string& _configFile)
 	m_sourceDir += '\\';
 
 	m_caseSensitive = config[string("caseSensitive")];
-	m_alwaysSemikolon = config[string("alwaysSemikolon")];
+	m_alwaysSemikolon = config[string("alwaysSemicolon")];
 	m_saveInOrder = config[string("saveInOrder")];
+	m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
 }
 
 
@@ -75,6 +78,13 @@ void Parser::parseSource(const std::string& _fileName)
 	{
 		//comments specefied throught "//" are ignored
 		if (line[0] == '/' && line[1] == '/') continue;
+
+		//precompiler directive
+		if (line[0] == '#')
+		{
+			preDirective(line);
+			continue;
+		}
 
 		//remove the '\r' from the end
 		//'\n' is not copied by getline
@@ -282,8 +292,6 @@ int Parser::parseFile(const std::string& _fileName)
 		if (returnCode == -1) return -1;
 	}
 
-	if (m_undeclaredSymbols.size()) PARSINGERROR("Symbol does not exist.", &m_undeclaredSymbols[0].token);
-
 	return 0;
 }
 
@@ -291,7 +299,7 @@ int Parser::parseFile(const std::string& _fileName)
 
 // ***************************************************** //
 
-int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
+int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 {
 	//gothic parser types:
 	// 1 - float
@@ -307,7 +315,7 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 	string word(m_lexer.getWord(*typeToken));
 
 	//validate type
-	int index = m_gameData.m_types.find(word);
+	int index = utils::find(m_gameData.m_types, word);
 
 	Token* nameToken;
 
@@ -342,17 +350,15 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 
 			if (*token != TokenType::ConstInt)
 			{
-				int constIndex = m_gameData.m_constInts.find(m_lexer.getWord(*token));
+				int constIndex = utils::find(m_gameData.m_constSymbols, m_lexer.getWord(*token));
 
-				if (constIndex != -1) arraySize = m_gameData.m_constInts[constIndex].value[0];
+				if (constIndex != -1) arraySize = ((ConstSymbol_Int&)m_gameData.m_constSymbols[constIndex]).value[0];
 				else PARSINGERROR("Const int expected.", token);
 			}
 			else
 				arraySize = m_lexer.getInt(*token);
 
-			token = m_lexer.nextToken();
-			NULLCHECK(token);
-			if (*token != TokenType::SquareBracketRight) PARSINGERROR("Right square bracket ']' expected.", token);
+			TOKEN(SquareBracketRight);
 
 			//read next one
 			token = m_lexer.nextToken();
@@ -362,7 +368,8 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		//only non consts are added after knowing name and type
 		if (!_const)
 		{
-			bool check = _table.emplace(word, index, 0,arraySize);
+			//type is saved as Symbol::type and as parent id
+			bool check = _table.emplace(word, index, 0, arraySize, index >= g_atomTypeCount ? m_gameData.m_types[index].id : 0xFFFFFFFF);
 			if (!check) parserLog(Warning, "Symbol redefinition.", nameToken);
 		}
 
@@ -379,50 +386,48 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		//const arrays start with '{'
 		if (arraySize > 1) TOKEN(CurlyBracketLeft);
 
-		//todo: remove the need for a garbage stack
-		//std::vector< game::StackInstruction > stack;
-
+		game::Symbol* symbol;
 		//type decides how to parse
 		if (index == 2)
 		{
-			m_gameData.m_constInts.emplace(word, arraySize);
-			game::ConstSymbol<int, 2>& constSymbol = m_gameData.m_constInts.back();
-			constSymbol.value.resize(arraySize);
+			ConstSymbol_Int* constSymbol = new game::ConstSymbol_Int(word, arraySize);
+			symbol = constSymbol;
+			constSymbol->value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
 			{
 				game::DummyInt result(0);
 				if (Term(&result)) return -1;
-				constSymbol.value[i] = result.value;
+				constSymbol->value[i] = result.value;
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
 		}
 		else if (index == 1)
 		{
-			m_gameData.m_constFloats.emplace(word, arraySize);
-			game::ConstSymbol<float, 1>& constSymbol = m_gameData.m_constFloats.back();
-			constSymbol.value.resize(arraySize);
+			ConstSymbol_Float* constSymbol = new game::ConstSymbol_Float(word, arraySize);
+			symbol = constSymbol;
+			constSymbol->value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
 			{
 				game::DummyFloat result(0);
 				if (Term(&result)) return -1;
-				constSymbol.value[i] = result.value;
+				constSymbol->value[i] = result.value;
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
 		}
 		else if (index == 3)
 		{
-			m_gameData.m_constStrings.emplace(word, arraySize);
-			game::ConstSymbol_String& constSymbol = m_gameData.m_constStrings.back();
-			constSymbol.value.resize(arraySize);
+			ConstSymbol_String* constSymbol = new game::ConstSymbol_String(word, arraySize);
+			symbol = constSymbol;
+			constSymbol->value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
 			{
 				TOKENEXT(TokenType::ConstStr, strToken);
-				constSymbol.value[i] = std::move(m_lexer.getWord(*strToken));
+				constSymbol->value[i] = std::move(m_lexer.getWord(*strToken));
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
 		}
@@ -431,6 +436,9 @@ int Parser::declareVar(bool _const, game::SymbolTable< game::Symbol >& _table)
 		if (arraySize > 1) TOKEN(CurlyBracketRight);
 
 		TOKEN(End);
+
+		m_gameData.m_symbols.add(symbol);
+		m_gameData.m_constSymbols.push_back(*symbol);
 
 		return 0;
 	}
@@ -446,19 +454,9 @@ int Parser::declareFunc()
 	TOKENEXT(Symbol, nameToken);
 
 	string name = m_lexer.getWord(*nameToken);
-	//could have been used already
-	int j = m_undeclaredSymbols.find(name);
-	if (j != -1)
-	{
-		m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken), m_undeclaredSymbols[j]);
-
-		m_undeclaredSymbols.erase(j);
-	}
-	else
-	{
-		m_gameData.m_functions.emplace(m_lexer.getWord(*nameToken), getType(*typeToken));
-	}
-	game::Symbol_Function& functionSymbol = m_gameData.m_functions.back();
+	
+	m_gameData.m_symbols.add(new Symbol_Function(name, getType(*typeToken)));
+	game::Symbol_Function& functionSymbol = (Symbol_Function&)m_gameData.m_symbols.back();
 
 	TOKEN(ParenthesisLeft);
 
@@ -479,7 +477,11 @@ int Parser::declareFunc()
 			//parameter name
 			TOKENEXT(Symbol, paramNameToken);
 
-			functionSymbol.params.emplace(m_lexer.getWord(*paramNameToken), getType(*paramTypeToken));
+			//add and fix parent if necessary
+			int type = getType(*paramTypeToken);
+			functionSymbol.params.emplace(m_lexer.getWord(*paramNameToken), type);
+			if (type >= g_atomTypeCount) functionSymbol.params.back().parent = m_gameData.m_types[type].id;
+			//todo: build uniform way to fix parent
 
 		} while (TOKENOPT(Comma));
 
@@ -490,7 +492,7 @@ int Parser::declareFunc()
 	}
 
 	//externals have no body
-	//instead there adress in this format:
+	//instead there adress is in this format:
 	// func void foo() 0xAB7541F0;
 	if (TOKENOPT(ConstInt))
 	{
@@ -552,12 +554,12 @@ int Parser::declareInstance()
 
 	//type does not matter when it is derivated from a prototype or not existent
 	//thus the check may happen afterwards
-	m_gameData.m_instances.emplace(names[0], i);
-	game::Symbol_Instance& instance = m_gameData.m_instances.back();
+	m_gameData.m_symbols.add(new Symbol_Instance(names[0], i));
+	game::Symbol_Instance& instance = (Symbol_Instance&)m_gameData.m_symbols.back();
 
 	if (i == -1)
 	{
-		i = m_gameData.m_prototypes.find(m_lexer.getWord(*typeToken));
+		i = utils::find(m_gameData.m_prototypes, m_lexer.getWord(*typeToken));
 
 		if(i == -1) PARSINGERROR("Unknown type.", typeToken);
 
@@ -591,16 +593,6 @@ int Parser::declareInstance()
 
 		m_currentNamespace = nullptr;
 
-	/*	if (!TOKENOPT(End))
-		{
-			if (m_alwaysSemikolon)
-			{
-				PARSINGERROR("End';' expected.", tokenOpt);
-			}
-			else //read token is part of the next declaration
-				m_lexer.prev();
-		}*/
-
 		//instances with a body have the const flag
 		instance.addFlag(game::Flag::Const);
 
@@ -615,7 +607,7 @@ int Parser::declareInstance()
 	if (names.size() > 1)
 		for (int i = 1; i < names.size(); ++i)
 		{
-			m_gameData.m_instances.emplace(names[i], instance);
+			m_gameData.m_symbols.add(new Symbol_Instance(names[i], instance));
 		}
 
 	return 0;
@@ -625,8 +617,6 @@ int Parser::declareInstance()
 
 int Parser::declarePrototype()
 {
-	Token* tokenOpt;
-
 	string name;
 
 	TOKENEXT(Symbol, nameToken);
@@ -644,8 +634,9 @@ int Parser::declarePrototype()
 
 	TOKEN(ParenthesisRight);
 
-	m_gameData.m_prototypes.emplace(name, i);
-	auto& prototype = m_gameData.m_prototypes.back();
+	m_gameData.m_symbols.add(new Symbol_Instance(name, i));
+	Symbol_Instance& prototype = (Symbol_Instance&)m_gameData.m_symbols.back();
+	m_gameData.m_prototypes.push_back(prototype);
 
 	prototype.type = 6; //type is prototype...
 	prototype.parent = m_gameData.m_types[i].id;
@@ -692,8 +683,9 @@ int Parser::declareClass()
 		PARSINGERROR("Curly Bracket '{' expected.", token);
 	}
 
-	m_gameData.m_types.emplace(word);
-	game::Symbol_Type& type = m_gameData.m_types.back();
+	m_gameData.m_symbols.add(new Symbol_Type(word));
+	game::Symbol_Type& type = (Symbol_Type&)m_gameData.m_symbols.back();
+	m_gameData.m_types.push_back(type);
 
 	int ret = 0;
 	//parse all members
@@ -739,6 +731,16 @@ int Parser::declareClass()
 
 // ***************************************************** //
 
+void Parser::preDirective(const std::string& _directive)
+{
+	if (_directive == "#INORDER")
+		m_parseInOrder = true;
+	else if (_directive == "#NOTINORDER")
+		m_parseInOrder = false;
+}
+
+// ***************************************************** //
+
 void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token)
 {
 	string msg;
@@ -759,11 +761,17 @@ void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token)
 		LOG(ERROR) << msg << " [l." << lineCount << "] " << "[" << m_currentFileName << "]";
 	else if (_lvl == Warning)
 		LOG(WARNING) << msg << " [l." << lineCount << "] " << "[" << m_currentFileName << "]";
+
+	//show +- 3 lines of the code where the error was found
+	if (m_showCodeSegmentOnError && _token)
+	{	
+		std::cout << utils::strInterval(m_currentFile, _token->begin, _token->end, 3)  << endl << endl;
+	}
 }
 
 int Parser::getType(Token& _token)
 {
-	return m_gameData.m_types.find(m_lexer.getWord(_token));
+	return utils::find(m_gameData.m_types,m_lexer.getWord(_token));
 }
 
 }

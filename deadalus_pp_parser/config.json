@@ -1,8 +1,10 @@
 {
 	"sourceDir" : "C:\Spiele\Gothic II\_work\data\SCRIPTS\Content",
 	"outputDir" : "C:\Users\Thanduriel\Documents\Projects\deadalus_pp_parser\example\compiled",
-	"caseSensitive" : false,
-	"alwaysSemikolon" : true,
 	
-	"saveInOrder" : true
+	"caseSensitive" : false,
+	"alwaysSemikolon" : false,
+	
+	"saveInOrder" : true,
+	"showCodeSegmentOnError" : true
 }

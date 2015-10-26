@@ -4,6 +4,8 @@
 #include <fstream>
 #include "symboltable.h"
 
+extern size_t g_atomTypeCount;
+
 namespace game{
 
 	// base structure for symbols
@@ -149,5 +151,5 @@ namespace game{
 
 
 	// a symboltable operating on symbols
-	typedef SymbolTable < Symbol > StandardSymbolTable;
+	typedef utils::SymbolTable < Symbol > StandardSymbolTable;
 }

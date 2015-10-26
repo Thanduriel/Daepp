@@ -85,7 +85,7 @@ namespace par{
 
 		Array< game::Symbol_Core* > param; //params or operands
 
-		std::vector < game::StackInstruction > stackInstruction;
+		game::ByteCodeStack stackInstruction;
 
 		Token& token; // the token, that represents this operator in the source code
 	};
@@ -102,7 +102,7 @@ namespace par{
 		size_t index;
 	};
 
-
+	// a symbol whichs declaration has not been parsed yet
 	class UndeclaredSymbol : public game::Symbol
 	{
 	public:
@@ -127,5 +127,20 @@ namespace par{
 		}
 
 		Token& token; //keep reference for error msgs
+	};
+
+	/*
+	 * A code block that is yet to be parse.
+	 */
+	class CodeToParse
+	{
+	public:
+		CodeToParse(std::list< par::Token >::iterator& _tokenIt, game::Symbol_Function& _function) :
+			m_tokenIt(_tokenIt),
+			m_function(_function)
+		{};
+	private:
+		std::list< par::Token >::iterator m_tokenIt; //token referencing to the '{'
+		game::Symbol_Function& m_function; //function that takes the code
 	};
 }

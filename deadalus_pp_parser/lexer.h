@@ -104,6 +104,20 @@ public:
 	 */
 	void prev() { m_iterator--; };
 
+	Token* peek() { auto tok = nextToken(); prev(); return tok; };
+
+	/* tokenToIterator() *********************
+	 * Only looks left of the current token, asuming that you did not jump back
+	 * @return the iterator to the given token
+	 */
+	std::list < Token >::iterator tokenToIterator(par::Token& _tok) { auto newIt = m_iterator; while (_tok != *newIt) newIt--; return newIt; };
+
+	/* setTokenIt() *************************
+	 * sets the stream to the given iterator
+	 * thus nextToken() will be the one after this iterator
+	 */
+	void setTokenIt(std::list < Token >::iterator& _it) { m_iterator = _it; };
+
 	/* getWord() ***************************
 	 * Retrieves the token as string
 	 */

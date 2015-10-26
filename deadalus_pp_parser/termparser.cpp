@@ -2,6 +2,7 @@
 
 #include "parser.h"
 #include "reservedsymbols.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -10,14 +11,14 @@ namespace par{
 
 	int Parser::Term(game::Symbol_Core* _ret, game::Symbol_Function* _function)
 	{
-		std::vector< game::StackInstruction >* instrStack = _function ? &_function->byteCode : nullptr;
+		game::ByteCodeStack* instrStack = _function ? &_function->byteCode : nullptr;
 
 		//Shunting-yard algorithm
 		//http://en.wikipedia.org/wiki/Shunting-yard_algorithm
 
 		//inlined symbols
 		std::vector < std::unique_ptr < game::Symbol_Core > > dummySymbols;
-		//somehow destruction goes wrong when a Symbol is added to dummySymbols
+		//somehow destruction goes wrong when a game::Symbol is added to dummySymbols
 		std::vector < std::unique_ptr < game::Symbol > > dummyArraySymbols;
 
 		//functions that are stored on the stack
@@ -56,9 +57,7 @@ namespace par{
 			else if (*token == TokenType::ConstStr)
 			{
 				m_gameData.m_internStrings.emplace_back();
-
 				m_gameData.m_internStrings.back().value.emplace_back(m_lexer.getWord(*token));
-
 				outputQue.push_back(&m_gameData.m_internStrings.back());
 			}
 			else if (*token == TokenType::Symbol)
@@ -66,18 +65,20 @@ namespace par{
 				//find a symbol with the given name
 				string str = m_lexer.getWord(*token);
 				int i;
-
 				//known constants are valid anywhere
-				if ((i = m_gameData.m_constFloats.find(str)) != -1)
+				if ((i = utils::find(m_gameData.m_constSymbols, str)) != -1)
 				{
-					game::Symbol_Core* sym = new DummyFloat(m_gameData.m_constFloats[i].value[0]);
-					dummySymbols.emplace_back(sym);
-					outputQue.push_back(sym);
-				}
-				else if ((i = m_gameData.m_constInts.find(str)) != -1)
-				{
-					//	outputQue.emplace_back(m_gameData.m_constInts[i]);
-					game::Symbol_Core* sym = new DummyInt(m_gameData.m_constInts[i].value[0]);
+					//inline them by pushing just the data to the que
+					game::Symbol_Core* sym;
+					switch (m_gameData.m_constSymbols[i].type)
+					{
+					case 1:
+						sym = new DummyFloat(((ConstSymbol_Float&)m_gameData.m_constSymbols[i]).value[0]);
+						break;
+					case 2:
+						sym = new DummyInt(((ConstSymbol_Int&)m_gameData.m_constSymbols[i]).value[0]);
+						break;
+					}
 					dummySymbols.emplace_back(sym);
 					outputQue.push_back(sym);
 				}
@@ -93,44 +94,37 @@ namespace par{
 					}
 					else if ((i = m_gameData.m_symbols.find(str)) != -1)
 					{
+						// function could be a call
+						//that is handled differently
+						if (m_gameData.m_symbols[i].type == 5)
+						{
+							game::Symbol_Function& symbol = (game::Symbol_Function&) m_gameData.m_symbols[i];
+							Token* tokenOpt;
+							// followed by a '('
+							if (TOKENOPT(TokenType::ParenthesisLeft))
+							{
+								functionSymbols.push_back(&symbol);
+								auto* mathToken = new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token);
+
+								//functions without param do not get an type update
+								mathToken->type = symbol.returnType;
+								operatorStack.push_back(mathToken);
+
+								//push the parenthese to save one iteration
+								operatorStack.emplace_back((MathSymbol*)nullptr);
+
+								continue;
+							}
+							else m_lexer.prev();
+						}
+
 						outputQue.push_back(&m_gameData.m_symbols[i]);
-					}
-					//functions go to the stack first when it is a call
-					else if ((i = m_gameData.m_functions.find(str)) != -1)
-					{
-						Token* tokenOpt;
-						// a function call
-						if (TOKENOPT(TokenType::ParenthesisLeft))
-						{
-							functionSymbols.push_back(&m_gameData.m_functions[i]);
-							operatorStack.push_back(new MathSymbol(((int)functionSymbols.size() - 1 + 11) * -1, *token));
-
-							//push the parenthese to save one iteration
-							operatorStack.emplace_back((MathSymbol*)nullptr);
-						}
-						//function as param
-						else
-						{
-							outputQue.push_back(&m_gameData.m_functions[i]);
-
-							m_lexer.prev();
-						}
-					}
-					else if ((i = m_gameData.m_instances.find(str)) != -1)
-					{
-						outputQue.push_back(&m_gameData.m_instances[i]);
-					}
-					//const strings are not parsed by Term()
-					//thus they can only be found in a codesegment
-					else if ((i = m_gameData.m_constStrings.find(str)) != -1)
-					{
-						outputQue.push_back(&m_gameData.m_constStrings[i]);
 					}
 					else if (m_currentNamespace && ((i = m_currentNamespace->elem.find(str)) != -1))
 					{
 						outputQue.push_back(&(m_currentNamespace->elem[i]));
 					}
-					//a member var
+					//a member var with a '.' int front of it
 					else if (operatorStack.size() && operatorStack.back() && operatorStack.back()->value == 2)
 					{
 						size_t j = outputQue.back()->type;
@@ -139,19 +133,17 @@ namespace par{
 						{
 							//the correct this pointer is set by pushParamInstr
 							//remove the instance name
+							auto& instance = *(game::Symbol*)outputQue.back();
 							outputQue.pop_back();
-							//remove '.'
-							operatorStack.pop_back();
+
+							//exchange it for a dummy
+							game::Symbol_Core* sym = new DummyInstance(instance.id);
+							dummySymbols.emplace_back(sym);
+							outputQue.push_back(sym);
+
 							outputQue.push_back(&(m_gameData.m_types[j].elem[i]));
 						}
 						else PARSINGERROR(m_gameData.m_types[j].name + " has no member with this name.", token);
-					}
-					// inside a file declarations can apear after a symbol is used
-					else
-					{
-						m_undeclaredSymbols.emplace(str, *token);
-						m_undeclaredSymbols.back().type = 5;
-						outputQue.push_back(&m_undeclaredSymbols.back());
 					}
 				}
 				else PARSINGERROR("Unknown symbol or not a const expression.", token);
@@ -219,7 +211,7 @@ namespace par{
 				operatorStack.pop_back();
 
 				//check for a function
-				if (operatorStack.size() && operatorStack.back()->value < -10)
+				if (operatorStack.size() && operatorStack.back() && operatorStack.back()->value < -10)
 				{
 					auto dummy = operatorStack.back();
 					dummySymbols.emplace_back(dummy);
@@ -270,7 +262,10 @@ namespace par{
 		//calculate value
 		//translate to bytecode
 		auto it = outputQue.begin();
-		while (outputQue.size() > 1)
+		//a single operand needs to be processed(like a call: void())
+		//while a single var is just forwarded
+		if (outputQue.size() > 1 || (*it)->isOperator)
+		do
 		{
 			//search for the next operator
 			while (!(*it)->isOperator) it++;
@@ -305,7 +300,7 @@ namespace par{
 				op.stackInstruction.emplace_back(func.testFlag(game::Flag::External) ? game::callExtern : game::call, func.id);
 
 				outputQue.erase(firstParam, it);
-				(*it)->type = func.returnType;
+				//(*it)->type = func.returnType;
 			}
 			//operator
 			else
@@ -321,7 +316,6 @@ namespace par{
 				if (operatorType.paramCount > 1) param1--;
 
 				//params are only pushed to the stack in non const expressions
-
 				auto returnSym = lang::operators[op.value].toByteCode(*param1, *param0, &op.stackInstruction);
 				if (!returnSym)
 					int uodu = 1;
@@ -340,7 +334,7 @@ namespace par{
 					(*it)->type = returnSym->type;
 					op.param.resize(operatorType.paramCount);
 
-					if (lang::operators[op.value].associativity == lang::LtR)
+				/*	if (lang::operators[op.value].associativity == lang::LtR)
 					{
 						param0 = param1;
 						for (int i = 0; i < operatorType.paramCount; ++i)
@@ -349,7 +343,7 @@ namespace par{
 							param0++;
 						}
 					}
-					else //assignment takes its params right to left
+					else*/ //assignment takes its params right to left
 					{
 						param0 = it;
 
@@ -368,7 +362,7 @@ namespace par{
 			}
 			//it is still pointing to the processed operator
 			it++;
-		}
+		} while (outputQue.size() > 1);
 
 
 		if (_ret)
@@ -408,22 +402,25 @@ namespace par{
 
 	// ***************************************************** //
 
-	int Parser::pushParamInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack)
+	int Parser::pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
 	{
 		//consts
 
-		if (_sym->type == 8)
+		if (_sym->type == 8 || _sym->type == 9)
 		{
 			_instrStack.emplace_back(game::Instruction::pushInt, ((game::DummyInt*)_sym)->value);
 			return 0;
 		}
+		// class member
+		else if (_sym->type == 11)
+		{
+			int instanceId = ((game::DummyInt*)_sym)->value;
+			_instrStack.emplace_back(game::Instruction::setInst, instanceId);
+			m_thisInst = instanceId;
+			return 0;
+		}
 
 		game::Symbol& sym = *(game::Symbol*)_sym;
-
-		if (sym.testFlag(game::Flag::Classvar) && sym.parent != m_thisInst)
-		{
-			_instrStack.emplace_back(game::Instruction::setInst, sym.parent);
-		}
 
 		//array
 		if (_sym->type == 2)
@@ -431,7 +428,7 @@ namespace par{
 			if (sym.size > 1)
 			{
 				_instrStack.emplace_back(game::Instruction::pushArray, ((game::Symbol*)_sym)->id);
-				_instrStack.push_back((game::Instruction)((par::ArraySymbol*)_sym)->index);
+				_instrStack.emplace_back((game::Instruction)((par::ArraySymbol*)_sym)->index);
 
 				return 0;
 			}
@@ -468,6 +465,25 @@ namespace par{
 	{
 		Token* tokenOpt;
 
+		// do not parse code yet
+		if (!m_isCodeParsing)
+		{
+			//keep reference for later
+			m_codeQue.emplace_back(m_lexer.tokenToIterator(_token), _functionSymbol);
+
+			//skip to the end of the codeblock
+			auto& token = _token;
+			unsigned int bracketCount = 0;
+			do
+			{
+				if (token.type == CurlyBracketLeft) bracketCount++;
+				else if (token.type == CurlyBracketRight) bracketCount--;
+				token = *m_lexer.nextToken();
+			} while (bracketCount > 0);
+
+			return 0;
+		}
+
 		if (_token != CurlyBracketLeft) PARSINGERROR("Expected '{'.", &_token);
 
 		while (TOKENOPT(Symbol))
@@ -479,16 +495,7 @@ namespace par{
 			}
 			else if (m_lexer.compare(*tokenOpt, "if"))
 			{
-				Term(nullptr, &_functionSymbol);
-
-				_functionSymbol.byteCode.push_back(game::Instruction::jmpf);
-
-				int jmpPos = _functionSymbol.byteCode.size() - 1;
-
-				parseCodeBlock(_functionSymbol);
-
-				//jump points towards the instruction after the conditional code block
-				_functionSymbol.byteCode[jmpPos].param = _functionSymbol.byteCode.size();
+				conditionalBlock(_functionSymbol);
 			}
 			else if (m_lexer.compare(*tokenOpt, "return"))
 			{
@@ -497,9 +504,9 @@ namespace par{
 				Term(&returnSymbol, &_functionSymbol);
 				TOKEN(End);
 
-				if (returnSymbol.type != _functionSymbol.returnType) PARSINGERROR("Type mismatch.", tokenOpt);
+				if (!verifyParam(_functionSymbol.returnType, returnSymbol.type)) PARSINGERROR("Type mismatch.", tokenOpt);
 
-				_functionSymbol.byteCode.push_back(game::Instruction::Ret);
+				_functionSymbol.byteCode.emplace_back(game::Instruction::Ret);
 			}
 			else
 			{
@@ -523,7 +530,62 @@ namespace par{
 
 	// ***************************************************** //
 
-	int Parser::pushInstr(game::Symbol_Core* _sym, std::vector< game::StackInstruction >& _instrStack)
+	int Parser::conditionalBlock(game::Symbol_Function& _functionSymbol)
+	{
+		std::vector < size_t > endJumps; //list of jumps that should lead to the end of the conditional block
+
+		//initial if statement
+		m_lexer.prev();
+
+		size_t condJmp;
+		//aditional "else" statements
+		do 
+		{
+			if (m_lexer.compare(*(m_lexer.peek()), "if"))
+			{
+				m_lexer.nextToken();
+
+				Term(nullptr, &_functionSymbol);
+
+				_functionSymbol.byteCode.emplace_back(game::Instruction::jmpf, 0);
+				condJmp = _functionSymbol.byteCode.size() - 1;
+
+				parseCodeBlock(_functionSymbol);
+
+				//jump points towards the instruction after this code block
+				// + the offset for a jump instruction
+				_functionSymbol.byteCode[condJmp].param = _functionSymbol.byteCode.getStackSize() + 5;
+			}
+			else
+			{
+				parseCodeBlock(_functionSymbol);
+				condJmp = 0xFFFFFFFF;
+			}
+
+			//jump towards the end of the conditional block
+			_functionSymbol.byteCode.emplace_back(game::Instruction::jmp, 0);
+			endJumps.push_back(_functionSymbol.byteCode.size() - 1);
+
+		} while (m_lexer.compare(*m_lexer.nextToken(), "else"));
+
+		//the last codeblock does not need a jump to reach the end
+		_functionSymbol.byteCode.pop_back();
+		//last block was "if else" and has its end jump point wrong
+		if (condJmp != 0xFFFFFFFF)_functionSymbol.byteCode[condJmp].param -= 5; 
+
+		//set the endJumps
+		size_t nextInstruction = _functionSymbol.byteCode.getStackSize();
+		for (size_t i = 0; i < endJumps.size() - 1; ++i)
+			_functionSymbol.byteCode[endJumps[i]].param = nextInstruction;
+
+		m_lexer.prev();
+
+		return 0;
+	}
+
+	// ***************************************************** //
+
+	int Parser::pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
 	{
 		if (!_sym->isOperator)
 		{
@@ -536,8 +598,12 @@ namespace par{
 			for (int i = 0; i < symbol.param.size(); ++i)
 				pushInstr(symbol.param[i], _instrStack);
 
+		//	_instrStack.reserve(_instrStack.size() + symbol.stackInstruction.size());
 			//add the operator instruction(s)
-			_instrStack.insert(_instrStack.end(), symbol.stackInstruction.begin(), symbol.stackInstruction.end());
+			for (auto& stackInstr : symbol.stackInstruction)
+			{
+				_instrStack.push_back(stackInstr);
+			}
 		}
 
 		return 0;
@@ -547,7 +613,7 @@ namespace par{
 
 	void Parser::assignFunctionParam(game::Symbol_Function& _func)
 	{
-		for (int i = _func.params.size() - 1; i >= 0; --i)
+		for (int i = (int)_func.params.size() - 1; i >= 0; --i)
 		{
 			game::Instruction assignInstr;
 			game::Instruction pushInstr;
@@ -574,23 +640,24 @@ namespace par{
 
 	// ***************************************************** //
 
-	bool Parser::verifyParam(game::Symbol& _expected, game::Symbol_Core& _found)
+	bool Parser::verifyParam(int _expected, int _found)
 	{
-		if (_expected.type == _found.type) return true;
+		if (_expected == _found) return true;
 		//float params
-		else if (_expected.type == 1 && (_found.type == 8 || _found.type == 9))
+		else if (_expected == 1 && (_found == 8 || _found == 9))
 		{
 			//dirty hack
 			//results into a pointer typecast of the value
-			_found.type = 8;
+			_found = 8;
 
 			return true;
 		}
 		//int params can be filled by a const int and instances
-		else if (_expected.type == 2 && (_found.type == 8 || _found.type == 7 || _found.type > 10)) return true;
+		else if (_expected == 2 && (_found == 8 || _found == 7 || _found >= g_atomTypeCount)) return true;
 		//and any instance
 		//default instance(7) is valid with any kind of instance params
-		else if (_expected.type == 7 && _found.type > 10) return true;
+		//aswell as 
+		else if (_expected == 7 && (_found >= g_atomTypeCount || _found == 11)) return true;
 
 		return false;
 	}

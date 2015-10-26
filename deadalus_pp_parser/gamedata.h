@@ -1,30 +1,38 @@
 #include "symbolext.h"
+#include "refcontainer.h"
 #include <deque>//currently based on this datastructure
+//#include "fusedcontainer.h"
+#include <memory>
 //todo test performance with: vector, deque, list?
+
+#define COMPONENTCONTAINER(a) boo::ComponentContainer<  a , game::Symbol > 
 
 namespace game{
 
-
 	struct GameData
 	{
-		GameData(std::initializer_list< Symbol_Type >& _init) : m_types(_init)
-		{};
+		GameData(std::initializer_list< game::Symbol_Type* >& _init) : m_types(_init)
+		{
+			g_atomTypeCount = m_types.size();
+		};
 
-		game::SymbolTable< game::Symbol > m_symbols;
+		//all symbols with unique name
+		utils::SymbolTable < game::Symbol > m_symbols;
+
+		//references for faster lookup
+		//todo test performance vs just the SymbolTable
 
 		//const symbols are resolved before compilation
-		game::SymbolTable< game::ConstSymbol<int, 2> > m_constInts;
-		game::SymbolTable< game::ConstSymbol_String > m_constStrings; //game::ConstSymbol<std::string, 3>
-		game::SymbolTable< game::ConstSymbol<float, 1> > m_constFloats;
+		//should be of type game::ConstSymbol<,>
+		utils::ReferenceContainer < game::Symbol > m_constSymbols;
+		
+		//types including the basic types and classes
+		utils::ReferenceContainer < game::Symbol_Type > m_types;
+		utils::ReferenceContainer < game::Symbol_Instance > m_prototypes;
 
-		game::SymbolTable< game::Symbol_Type > m_types;
-
-		game::SymbolTable< game::Symbol_Function > m_functions;
-
-		game::SymbolTable< game::Symbol_Instance > m_instances;
-		game::SymbolTable< game::Symbol_Instance > m_prototypes;
-
-		//not a SymbolTable since their names are generated and thus not an identifier
+		//not part of all symbols since their names are generated and thus not an identifier
+		//and no searching for them takes place
 		std::deque< game::ConstSymbol_String > m_internStrings;
+
 	};
 }

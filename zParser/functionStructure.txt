@@ -2,7 +2,7 @@ function symbol:
 
 size - amount of parameters
 	are the symbols found after this
-offset - (offset << 12) return type
+offset - return type
 content[0] - start of codeblock
 
 excert from compiled function:

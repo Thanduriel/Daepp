@@ -10,6 +10,8 @@ namespace par{
 	{
 	}
 
+	// ********************************************* //
+
 	bool symbolCmp(game::Symbol* _slf, game::Symbol* _oth) { return _slf->id < _oth->id; }
 
 	int Compiler::compile(const std::string& _outputFile, bool _saveInOrder)
@@ -40,62 +42,8 @@ namespace par{
 			for (uint32_t i = 0; i < symbolCount; ++i)
 				fileStream.write((char*)&i, 4);
 
-		//	std::vector < game::Symbol* > allSymbols;
-		//	allSymbols.resize(symbolCount);
-
 			size_t c = 0;
 			
-			//add all symbols to an array
-/*			for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_symbols[i];
-			c += m_gameData.m_symbols.size();
-			for (int i = 0; i < m_gameData.m_constFloats.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_constFloats[i];
-			c += m_gameData.m_constFloats.size();
-			for (int i = 0; i < m_gameData.m_constInts.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_constInts[i];
-			c += m_gameData.m_constInts.size();
-			for (int i = 0; i < m_gameData.m_constStrings.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_constStrings[i];
-			c += m_gameData.m_constStrings.size();
-
-			for (int i = 0; i < m_gameData.m_functions.size(); ++i)
-			{
-				allSymbols[c] = &m_gameData.m_functions[i];
-
-				c++;
-
-				for (int j = 0; j < m_gameData.m_functions[i].params.size(); ++j)
-					allSymbols[c + j] = &m_gameData.m_functions[i].params[j];
-				c += m_gameData.m_functions[i].params.size();
-				for (int j = 0; j < m_gameData.m_functions[i].locals.size(); ++j)
-					allSymbols[c + j] = &m_gameData.m_functions[i].locals[j];
-				c += m_gameData.m_functions[i].locals.size();
-			}
-
-			for (int i = 11; i < m_gameData.m_types.size(); ++i)
-			{
-				allSymbols[c] = &m_gameData.m_types[i];
-				c++;
-
-				for (int j = 0; j < m_gameData.m_types[i].elem.size(); ++j)
-					allSymbols[c + j] = &m_gameData.m_types[i].elem[j];
-				c += m_gameData.m_types[i].elem.size();
-			}
-
-
-			for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_prototypes[i];
-			c += m_gameData.m_prototypes.size();
-			for (int i = 0; i < m_gameData.m_instances.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_instances[i];
-			c += m_gameData.m_instances.size();
-			for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
-				allSymbols[c + i] = &m_gameData.m_internStrings[i];
-			c += m_gameData.m_internStrings.size();
-
-			std::sort(allSymbols.begin(), allSymbols.begin()+c, symbolCmp);*/
-
 			//compile in order
 			for (size_t i = 0; i < game::Symbol::idCount; ++i)
 			{
@@ -114,37 +62,7 @@ namespace par{
 					compileSymbol(*symbol);
 			}
 		}
-		/*
-		compileSortedTable();
 
-		// symbols
-		for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
-			compileSymbol( m_gameData.m_symbols[i]);
-		for (int i = 0; i < m_gameData.m_constFloats.size(); ++i)
-			compileSymbol( *(game::Symbol*)&m_gameData.m_constFloats[i]);
-		for (int i = 0; i < m_gameData.m_constInts.size(); ++i)
-			compileSymbol( *(game::Symbol*)&m_gameData.m_constInts[i]);
-		for (int i = 0; i < m_gameData.m_constStrings.size(); ++i)
-			compileSymbol( *(game::Symbol*)&m_gameData.m_constStrings[i]);
-		
-		
-		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
-			compileFunction( m_gameData.m_functions[i]);
-
-		for (int i = 11; i < m_gameData.m_types.size(); ++i)
-			compileClass( m_gameData.m_types[i]);
-
-		for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
-			compileFunction( m_gameData.m_prototypes[i]);
-		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
-			compileFunction( m_gameData.m_instances[i]);
-
-		//default value for no parent
-		parent = 0xFFFFFFFF;
-
-		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
-			compileSymbol(*(game::Symbol*)&m_gameData.m_internStrings[i]);
-			*/
 		//(int)data stack length
 		fileStream.write((char*)&stackSize, 4);
 
@@ -154,56 +72,6 @@ namespace par{
 		fileStream.close();
 
 		return 0;
-	}
-
-	// ************************************************************* //
-
-	int Compiler::compileSortedTable()
-	{
-		for (int i = 0; i < m_gameData.m_symbols.size(); ++i)
-			fileStream.write((char*)&m_gameData.m_symbols[i].id, 4);
-		
-		for (int i = 0; i < m_gameData.m_constFloats.size(); ++i)
-			fileStream.write((char*)&m_gameData.m_constFloats[i].id, 4);
-		
-		for (int i = 0; i < m_gameData.m_constInts.size(); ++i)
-			fileStream.write((char*)&m_gameData.m_constInts[i].id, 4);
-		
-		for (int i = 0; i < m_gameData.m_constStrings.size(); ++i)
-			fileStream.write((char*)&m_gameData.m_constStrings[i].id, 4);
-		
-		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
-		{
-			fileStream.write((char*)&m_gameData.m_functions[i].id, 4);
-
-			for (int j = 0; j < m_gameData.m_functions[i].params.size(); ++j)
-				fileStream.write((char*)&m_gameData.m_functions[i].params[j].id, 4);
-			for (int j = 0; j < m_gameData.m_functions[i].locals.size(); ++j)
-				fileStream.write((char*)&m_gameData.m_functions[i].locals[j].id, 4);
-		}
-		
-		for (int i = 11; i < m_gameData.m_types.size(); ++i)
-		{
-			fileStream.write((char*)&m_gameData.m_types[i].id, 4);
-
-			for (int j = 0; j < m_gameData.m_types[i].elem.size(); ++j)
-				fileStream.write((char*)&m_gameData.m_types[i].elem[j].id, 4);
-		}
-
-		for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
-		{
-			fileStream.write((char*)&m_gameData.m_prototypes[i].id, 4);
-		}
-
-		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
-		{
-			fileStream.write((char*)&m_gameData.m_instances[i].id, 4);
-		}
-
-		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
-			fileStream.write((char*)&m_gameData.m_internStrings[i].id, 4);
-
-		return true;
 	}
 
 	// ************************************************************* //
@@ -223,7 +91,7 @@ namespace par{
 
 		//(int) offset
 		tmp = 0;
-		fileStream.write((char*)&tmp, 4);
+		fileStream.write((char*)&offset, 4);
 		//fileStream << (int)0;
 
 		//(int) bitfield
@@ -297,33 +165,32 @@ namespace par{
 
 	int Compiler::compileFunction(game::Symbol_Function& _sym)
 	{
+		//compile information to write into a file
 		_sym.size = _sym.params.size();
 		_sym.stackBegin = stackSize;
+		offset = _sym.returnType;
 
 		//calculate size the code will take
-		for (int i = 0; i < _sym.byteCode.size(); ++i)
-		{
-			stackSize += _sym.byteCode[i].hasParam ? 5 : 1;
-		}
+		stackSize += _sym.byteCode.getStackSize();
+
 		//for the return instruction
 		stackSize++;
 
 		compileSymbol(_sym);
+
+		//reset offset value in case a symbol with default value follows
+		offset = 0;
 
 		//after the function params and locals follow
 
 		for (int i = 0; i < _sym.params.size(); ++i)
 		{
 			_sym.params[i].name = _sym.name + '.' + _sym.params[i].name;
-
-		//	compileSymbol(_sym.params[i]);
 		}
 
 		for (int i = 0; i < _sym.locals.size(); ++i)
 		{
 			_sym.locals[i].name = _sym.name + '.' + _sym.locals[i].name;
-
-		//	compileSymbol(_sym.locals[i]);
 		}
 
 		return true;
@@ -334,18 +201,14 @@ namespace par{
 	int Compiler::compileStack()
 	{
 		for (int i = 0; i < m_functions.size(); ++i)
-			compileByteCode(m_functions[i]->byteCode);
-/*		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
-			compileByteCode(m_gameData.m_functions[i].byteCode);
-		for (int i = 0; i < m_gameData.m_prototypes.size(); ++i)
-			compileByteCode(m_gameData.m_prototypes[i].byteCode);
-		for (int i = 0; i < m_gameData.m_instances.size(); ++i)
-			compileByteCode(m_gameData.m_instances[i].byteCode);*/
+			compileByteCode(m_functions[i]->byteCode, m_functions[i]->stackBegin);
 
 		return 0;
 	}
 
-	void Compiler::compileByteCode(std::vector< game::StackInstruction >& _byteCode)
+	// ********************************************* //
+
+	void Compiler::compileByteCode(game::ByteCodeStack& _byteCode, unsigned int _offset)
 	{
 		static game::Instruction retInstr = game::Instruction::Ret;
 
@@ -355,10 +218,15 @@ namespace par{
 			fileStream.write((char*)&opCode, 1);
 
 			//calls take a direct stack adr as param
-			// array indecies can be mistaken for call instructions but have hasParam=false
+			// array indecies can be mistaken for call instructions but have hasParam==false
 			if (opCode == game::Instruction::call && inst.hasParam)
 			{
 				inst.param = ((game::Symbol_Function*)&game::Symbol::getById(inst.param))->stackBegin;
+			}
+			//jumps are direct stack addresses
+			else if (opCode == game::Instruction::jmp || opCode == game::Instruction::jmpf)
+			{
+				inst.param += _offset;
 			}
 			//optional param
 			if (inst.hasParam) fileStream.write((char*)&inst.param, 4);
