@@ -34,36 +34,36 @@ namespace par{
 
 		using namespace game;
 
-		while (token = m_lexer.nextToken())
+		while (token = m_lexer->nextToken())
 		{
 			if (*token == TokenType::End || *token == TokenType::CurlyBracketLeft || *token == TokenType::SquareBracketRight) //if statments are closed by a begining codeblock
 			{
-				m_lexer.prev();
+				m_lexer->prev();
 				break;
 			}
 			//deduct type
 			else if (*token == TokenType::ConstInt)
 			{
-				game::Symbol_Core* sym = new DummyInt(m_lexer.getInt(*token));
+				game::Symbol_Core* sym = new DummyInt(m_lexer->getInt(*token));
 				dummySymbols.emplace_back(sym);
 				outputQue.push_back(sym);
 			}
 			else if (*token == TokenType::ConstFloat)
 			{
-				game::Symbol_Core* sym = new DummyFloat(m_lexer.getFloat(*token));
+				game::Symbol_Core* sym = new DummyFloat(m_lexer->getFloat(*token));
 				dummySymbols.emplace_back(sym);
 				outputQue.push_back(sym);
 			}
 			else if (*token == TokenType::ConstStr)
 			{
 				m_gameData.m_internStrings.emplace_back();
-				m_gameData.m_internStrings.back().value.emplace_back(m_lexer.getWord(*token));
+				m_gameData.m_internStrings.back().value.emplace_back(m_lexer->getWord(*token));
 				outputQue.push_back(&m_gameData.m_internStrings.back());
 			}
 			else if (*token == TokenType::Symbol)
 			{
 				//find a symbol with the given name
-				string str = m_lexer.getWord(*token);
+				string str = m_lexer->getWord(*token);
 				int i;
 				//known constants are valid anywhere
 				if ((i = utils::find(m_gameData.m_constSymbols, str)) != -1)
@@ -115,7 +115,7 @@ namespace par{
 
 								continue;
 							}
-							else m_lexer.prev();
+							else m_lexer->prev();
 						}
 
 						outputQue.push_back(&m_gameData.m_symbols[i]);
@@ -155,7 +155,7 @@ namespace par{
 				for (int i = 0; i < lang::operatorCount; ++i)
 				{
 					const lang::Operator& o1 = lang::operators[i];
-					if (m_lexer.compare(*token, o1.op))
+					if (m_lexer->compare(*token, o1.op))
 					{
 						//stack not empty and operator on top
 						while (operatorStack.size() && operatorStack.back() && operatorStack.back()->value >= 0 &&
@@ -224,15 +224,15 @@ namespace par{
 			//array var
 			else if (*token == TokenType::SquareBracketLeft)
 			{
-				m_lexer.prev();
-				m_lexer.prev();
+				m_lexer->prev();
+				m_lexer->prev();
 
 				//the previous token must allow for array access
-				par::Token& peek = *m_lexer.nextToken();
+				par::Token& peek = *m_lexer->nextToken();
 				if (!(peek == TokenType::Symbol)) PARSINGERROR("This symbol does not support array like access.", &peek);
 
-				m_lexer.nextToken();//discard the SquareBracket
-				//
+				m_lexer->nextToken();//discard the SquareBracket
+
 				game::DummyInt result(0);
 
 				if (Term(&result)) PARSINGERROR("Term does not resolve to an int.", token);
@@ -461,43 +461,64 @@ namespace par{
 
 	// ***************************************************** //
 
-	int Parser::parseCodeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol)
+	int Parser::codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol)
 	{
 		Token* tokenOpt;
 
-		// do not parse code yet
-		if (!m_isCodeParsing)
+		//keep reference for later
+		m_codeQue->emplace_back(m_lexer->tokenToIterator(_token), _functionSymbol, m_currentNamespace);
+
+		//skip to the end of the codeblock
+		Token* token = &_token;
+		unsigned int bracketCount = 0;
+
+		do
 		{
-			//keep reference for later
-			m_codeQue.emplace_back(m_lexer.tokenToIterator(_token), _functionSymbol);
+			if (token->type == CurlyBracketLeft) bracketCount++;
+			else if (token->type == CurlyBracketRight) bracketCount--;
+			token = m_lexer->nextToken();
+		} while (bracketCount > 0);
 
-			//skip to the end of the codeblock
-			auto& token = _token;
-			unsigned int bracketCount = 0;
-			do
-			{
-				if (token.type == CurlyBracketLeft) bracketCount++;
-				else if (token.type == CurlyBracketRight) bracketCount--;
-				token = *m_lexer.nextToken();
-			} while (bracketCount > 0);
+		//jumped over the next token
+		m_lexer->prev();
+		SEMIKOLON;
 
-			return 0;
-		}
+		return 0;
+	}
 
-		if (_token != CurlyBracketLeft) PARSINGERROR("Expected '{'.", &_token);
+	// ***************************************************** //
+
+	int Parser::parseCodeBlock(CodeToParse& _codeToParse)
+	{
+		//restore envoirement of the block
+		m_lexer->setTokenIt(_codeToParse.m_tokenIt);
+		m_currentNamespace = _codeToParse.m_namespace;
+
+		parseCodeBlock(_codeToParse.m_function);
+
+		return 0;
+	}
+
+	// ***************************************************** //
+
+	int Parser::parseCodeBlock(game::Symbol_Function& _functionSymbol)
+	{
+		TOKEN(CurlyBracketLeft);
+
+		Token* tokenOpt;
 
 		while (TOKENOPT(Symbol))
 		{
 			//local var
-			if (m_lexer.compare(*tokenOpt, "var"))
+			if (m_lexer->compare(*tokenOpt, "var"))
 			{
 				declareVar(false, _functionSymbol.locals);
 			}
-			else if (m_lexer.compare(*tokenOpt, "if"))
+			else if (m_lexer->compare(*tokenOpt, "if"))
 			{
 				conditionalBlock(_functionSymbol);
 			}
-			else if (m_lexer.compare(*tokenOpt, "return"))
+			else if (m_lexer->compare(*tokenOpt, "return"))
 			{
 				game::Symbol_Core returnSymbol;
 
@@ -511,7 +532,7 @@ namespace par{
 			else
 			{
 				//term is analysed completly, first symbol is not a keyword
-				m_lexer.prev();
+				m_lexer->prev();
 
 				Term(nullptr, &_functionSymbol);
 				TOKEN(End);
@@ -535,15 +556,15 @@ namespace par{
 		std::vector < size_t > endJumps; //list of jumps that should lead to the end of the conditional block
 
 		//initial if statement
-		m_lexer.prev();
+		m_lexer->prev();
 
 		size_t condJmp;
 		//aditional "else" statements
 		do 
 		{
-			if (m_lexer.compare(*(m_lexer.peek()), "if"))
+			if (m_lexer->compare(*(m_lexer->peek()), "if"))
 			{
-				m_lexer.nextToken();
+				m_lexer->nextToken();
 
 				Term(nullptr, &_functionSymbol);
 
@@ -566,7 +587,7 @@ namespace par{
 			_functionSymbol.byteCode.emplace_back(game::Instruction::jmp, 0);
 			endJumps.push_back(_functionSymbol.byteCode.size() - 1);
 
-		} while (m_lexer.compare(*m_lexer.nextToken(), "else"));
+		} while (m_lexer->compare(*m_lexer->nextToken(), "else"));
 
 		//the last codeblock does not need a jump to reach the end
 		_functionSymbol.byteCode.pop_back();
@@ -578,7 +599,7 @@ namespace par{
 		for (size_t i = 0; i < endJumps.size() - 1; ++i)
 			_functionSymbol.byteCode[endJumps[i]].param = nextInstruction;
 
-		m_lexer.prev();
+		m_lexer->prev();
 
 		return 0;
 	}

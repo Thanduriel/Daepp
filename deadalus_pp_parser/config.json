@@ -3,7 +3,7 @@
 	"outputDir" : "C:\Users\Thanduriel\Documents\Projects\deadalus_pp_parser\example\compiled",
 	
 	"caseSensitive" : false,
-	"alwaysSemikolon" : false,
+	"alwaysSemicolon" : false,
 	
 	"saveInOrder" : true,
 	"showCodeSegmentOnError" : true

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "parserconfig.h"
 #include "lexer.h"
 #include "compiler.h"
 #include "parserintern.h"
@@ -33,15 +33,19 @@ public:
 	void parseSource(const std::string& _fileName);
 
 	/* parseFile() ************************************
-	* parses a .d file containing code
+	* Parses a token stream hold by the given lexer
+	* and adds all declarations to the current GameData.
+	* This is not multithreading compatible.
+	*
 	*/
-	int parseFile(const std::string& _fileName);
+	int parseFile(Lexer& _lexer);
+	static void tokenizeFile(const std::string& _fileName, Lexer* _lexer);
 
 
 	/* compile() *************************************
 	 * Compiles the parsed data into a (hopefully) by gothic readable .dat
 	 */
-	void compile() { m_compiler.compile("test.dat", m_saveInOrder); };
+	void compile() { m_compiler.compile("test.dat", m_config.m_saveInOrder); };
 
 private:
 	/* preCompilerDirective() *****************************
@@ -70,16 +74,19 @@ private:
 	bool verifyParam(game::Symbol& _expected, game::Symbol_Core& _found) { return verifyParam(_expected.type, _found.type); };
 	bool verifyParam(int _expected, int _found);
 
-	/* parseInstruction() ***********************
+	/* codeBlock() ***********************
 	* reads code from the tokenstream and translates it to bytecode
 	* @param _token first token of the instruction
 	* @param _stack the stack where the bytecode is pushed to
 	*/
-	int parseCodeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol);
-	int parseCodeBlock(game::Symbol_Function& _functionSymbol) { return parseCodeBlock(*m_lexer.nextToken(), _functionSymbol); };
+	int codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol);
+	int codeBlock(game::Symbol_Function& _functionSymbol) { return codeBlock(*m_lexer->nextToken(), _functionSymbol); };
+
+	int parseCodeBlock(CodeToParse& _codeToParse);
+	int parseCodeBlock(game::Symbol_Function& _functionSymbol); //does the actual work and may be used recursive
 
 	/* conditionalBlock() ***************************
-	 * parses a conditional structure started by a "if"
+	 * parses a conditional structure started by an "if"
 	 */
 	int conditionalBlock(game::Symbol_Function& _functionSymbol);
 
@@ -116,25 +123,21 @@ private:
 
 	inline int getType(Token& _token);
 
-	//tokenizer
-	Lexer m_lexer;
+	//current tokenizer with the data as token stream
+	Lexer* m_lexer;
 
 	//
 	Compiler m_compiler;
-
+	
 	//config
-	std::string m_sourceDir;
-	bool m_caseSensitive;
-	bool m_alwaysSemikolon;
-	bool m_saveInOrder;
-	bool m_showCodeSegmentOnError;
+	ParserConfig m_config;
 
 	//config set by precompiler directives
 	bool m_parseInOrder;
 
 	//state vars
 	std::string m_currentFileName; //< name of the parsed file
-	std::string m_currentFile; //< content of the currently parsed file
+	//std::string m_currentFile; //< content of the currently parsed file
 	bool m_isCodeParsing; //< currently in code parsing mode
 	
 	int m_lineCount; //< current line
@@ -143,7 +146,7 @@ private:
 	//and stack simulation
 	game::Symbol_Type* m_currentNamespace;
 	utils::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
-	std::vector< CodeToParse > m_codeQue;
+	std::vector< CodeToParse >* m_codeQue;
 	int m_thisInst; //< instance id that occupies the this-pointer in the current code
 	//resolved content
 	game::GameData m_gameData;

@@ -1,4 +1,6 @@
 #include "utils.h"
+#include <vector>
+#include <algorithm>
 
 namespace utils {
 
@@ -34,5 +36,11 @@ namespace utils {
 		}
 
 		return std::string(_str.begin() + begin, _str.begin() + end + 1);
+	}
+
+	// **************************************** //
+	void toLower(std::string& _str)
+	{
+		std::transform(_str.begin(), _str.end(), _str.begin(), ::tolower);
 	}
 }

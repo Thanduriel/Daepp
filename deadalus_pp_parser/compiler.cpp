@@ -171,7 +171,7 @@ namespace par{
 		offset = _sym.returnType;
 
 		//calculate size the code will take
-		stackSize += _sym.byteCode.getStackSize();
+		stackSize += (int)_sym.byteCode.getStackSize();
 
 		//for the return instruction
 		stackSize++;

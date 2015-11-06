@@ -26,8 +26,8 @@ namespace par{
 
 	/* lexer */
 
-Lexer::Lexer(std::string& _text)
-	: m_text(_text)
+Lexer::Lexer(std::string& _dataName)
+	:m_dataName(_dataName)
 {
 }
 
@@ -36,8 +36,9 @@ Lexer::~Lexer()
 {
 }
 
-void Lexer::analyse()
+void Lexer::analyse(std::string&& _text)
 {
+	m_text = _text;
 	//reset
 	m_tokens.resize(0);
 
@@ -51,9 +52,9 @@ void Lexer::analyse()
 	int count;
 	bool isHex = false;
 
-	size_t size = m_text.size();
+	unsigned int size = (unsigned int)m_text.size();
 
-	for (size_t i = 0; i < size; ++i)
+	for (unsigned int i = 0; i < size; ++i)
 	{
 		if (!lookEnd)
 		{
@@ -64,7 +65,7 @@ void Lexer::analyse()
 				//a line
 				if (m_text[i + 1] == '/')
 				{
-					i = m_text.find('\n', i + 1);
+					i = (unsigned int)m_text.find('\n', i + 1);
 					//no line break appears when this is the last line
 					if (i == std::string::npos) i = size;
 					//continue evaluating the segment after the comment
@@ -74,7 +75,7 @@ void Lexer::analyse()
 				// + 1 because the index of the first char is returned by find
 				else if ((m_text[i + 1] == '*'))
 				{
-					i = m_text.find("*/", i + 2) + 1;
+					i = (unsigned int)m_text.find("*/", i + 2) + 1;
 					//continue evaluating the segment after the comment
 					continue;
 				}
@@ -142,13 +143,13 @@ void Lexer::analyse()
 			{
 				lookEnd = 1;
 				//save index of the first char to return it later on
-				begin = i;
+				begin = (unsigned int)i;
 			}
 
 			//anything else is an operator
 			else
 			{
-				begin = i;
+				begin = (unsigned int)i;
 				//some operators consist of two chars
 				if (m_text[i + 1] == m_text[i] || m_text[i + 1] == '=')
 					i++;
@@ -161,7 +162,7 @@ void Lexer::analyse()
 					m_text[i] = 'u'; // u for unary minus
 				}
 
-				m_tokens.emplace_back(TokenType::Operator, begin, i);
+				m_tokens.emplace_back(TokenType::Operator, begin, (unsigned int)i);
 			}
 		}
 		//lookEnd = 1 means that the end of a word is searched
@@ -175,8 +176,9 @@ void Lexer::analyse()
 				i--;
 				m_tokens.emplace_back(TokenType::Symbol, begin, i);
 
-				//convert to upper case
-				for (int j = begin; j <= i; ++j)
+				//convert to lower case
+				//todo do this only when caseSensitive == false
+				for (unsigned int j = begin; j <= i; ++j)
 					m_text[j] = ::tolower(m_text[j]);
 
 				//return to default state
@@ -220,6 +222,8 @@ void Lexer::analyse()
 	m_iterator = m_tokens.begin();
 }
 
+// ********************************************* //
+
 Token* Lexer::nextToken()
 {
 	return (m_iterator != m_tokens.end() ? &*m_iterator++ : nullptr);
@@ -229,6 +233,8 @@ std::string Lexer::getWord(Token& _token)
 {
 	return m_text.substr(_token.begin, _token.end + 1 - _token.begin);
 }
+
+// ********************************************* //
 
 int Lexer::getInt(Token& _token)
 {
@@ -243,15 +249,21 @@ int Lexer::getInt(Token& _token)
 	return strtol(&m_text[_token.begin], nullptr, 0);//atoi(&m_text[_token.begin]);
 }
 
+// ********************************************* //
+
 float Lexer::getFloat(Token& _token)
 {
 	return strtof(&m_text[_token.begin], nullptr);
 }
 
+// ********************************************* //
+
 bool Lexer::compare(const Token& _token, const std::string& _str)
 {
 	return !m_text.compare(_token.begin, 1 + _token.end - _token.begin, _str);
 }
+
+// ********************************************* //
 
 //additional characters that are valid in symbol names
 const std::string validChars = "_^@üöäÜÄÖ";

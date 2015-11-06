@@ -284,12 +284,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="basictypes.h" />
+    <ClInclude Include="codeparser.h" />
     <ClInclude Include="compiler.h" />
     <ClInclude Include="easylogging++.h" />
     <ClInclude Include="fusedcontainer.h" />
     <ClInclude Include="gamedata.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="parser.h" />
+    <ClInclude Include="parserconfig.h" />
     <ClInclude Include="parserintern.h" />
     <ClInclude Include="refcontainer.h" />
     <ClInclude Include="reservedsymbols.h" />
@@ -301,6 +303,7 @@
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="codeparser.cpp" />
     <ClCompile Include="compiler.cpp" />
     <ClCompile Include="deadalus_pp_parser.cpp" />
     <ClCompile Include="lexer.cpp" />

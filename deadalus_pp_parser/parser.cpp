@@ -1,6 +1,8 @@
 #include <fstream>
 #include <cerrno>
 #include <queue>
+#include <thread>
+#include <time.h>  //clock
 
 //3rd party headers
 #include "easylogging++.h"//https://github.com/easylogging/easyloggingpp#logging
@@ -20,7 +22,7 @@ using namespace game;
 namespace par{
 
 Parser::Parser(const std::string& _configFile)
-	:m_lexer(m_currentFile),
+	:
 	m_gameData(lang::basicTypes),
 	m_compiler(m_gameData),
 	m_currentNamespace(nullptr),
@@ -39,13 +41,13 @@ Parser::Parser(const std::string& _configFile)
 		LOG(ERROR) << "Failed to load config with message: " << _message << ".";
 		return;
 	}
-	m_sourceDir = config[string("sourceDir")];
-	m_sourceDir += '\\';
+	m_config.m_sourceDir = config[string("sourceDir")];
+	m_config.m_sourceDir += '\\';
 
-	m_caseSensitive = config[string("caseSensitive")];
-	m_alwaysSemikolon = config[string("alwaysSemicolon")];
-	m_saveInOrder = config[string("saveInOrder")];
-	m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
+	m_config.m_caseSensitive = config[string("caseSensitive")];
+	m_config.m_alwaysSemikolon = config[string("alwaysSemicolon")];
+	m_config.m_saveInOrder = config[string("saveInOrder")];
+	m_config.m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
 }
 
 
@@ -53,10 +55,12 @@ Parser::~Parser()
 {
 }
 
+void foo(const std::string& _bla, Lexer* _lex){};
+
 void Parser::parseSource(const std::string& _fileName)
 {
 
-	std::ifstream in(m_sourceDir + _fileName.c_str(), std::ios::in | std::ios::binary);
+	std::ifstream in(m_config.m_sourceDir + _fileName.c_str(), std::ios::in | std::ios::binary);
 
 	//check if file is valid
 	if (!in)
@@ -72,6 +76,7 @@ void Parser::parseSource(const std::string& _fileName)
 	//_fileName.substr(0, _fileName.find_last_of('\\'));
 	//string path = pathEnd == string::npos ? "" : string(_fileName.begin(), _fileName.begin() + pathEnd);
 
+	std::vector< string > names;
 	//parse the file line by line
 	string line;
 	while (getline(in, line))
@@ -110,9 +115,6 @@ void Parser::parseSource(const std::string& _fileName)
 		//line is not relevant
 		if (endPos == string::npos) continue;
 
-
-		std::vector<string> names;
-
 		//namematching with wildcards '*' and '?'
 
 		size_t wildcardM = line.find('*'); //multiple chars
@@ -125,128 +127,125 @@ void Parser::parseSource(const std::string& _fileName)
 			DIR *dir;
 			dirent *ent;
 
+			auto begin = names.size();
 			//scan the dir for containers
-			if ((dir = opendir((m_sourceDir + pathLocal).c_str())) != NULL)
+			if ((dir = opendir((m_config.m_sourceDir + pathLocal).c_str())) != NULL)
 			{
 				while ((ent = readdir(dir)) != NULL)
 				{
 					names.push_back(string(ent->d_name));
+					utils::toLower(names.back());
 				}
 			}
-			//match the filename with every file in the directionary
-			for (int i = 0; i < names.size(); ++i)
+			if (begin == names.size())
 			{
-				bool fits = true;
-				int offset = 0;
-				unsigned int j;
-				for (j = 0; j < line.size(); ++j)
-				{
-					// '?' => ignore the next char
-					if (line[j] == '?') offset++;
-					// '*'
-					else if (line[j] == '*')
-					{
-						//the char afterwards is where the '*' part ends
-						//'*' is never at the end since there are only two types of significant endings that should never overlap
-						j++;
-						//todo find all possible points to continiue so that this works: a*b -> abab
-						bool match = false;
-						for (offset; j + offset < names[i].size(); ++offset)
-							//found where the '*' ends
-							if (::tolower(names[i][j + offset]) == ::tolower(line[j]))
-							{
-								match = true;
-								break;
-							}
-						//file does not match
-						if (!match)
-						{
-							fits = false;
-							break;
-						}
-					}
-					//check char by char
-					//file does not match
-					if (::tolower(line[j]) != ::tolower(names[i][j + offset]))
-					{
-						fits = false;
-						break;
-					}
-				}
-				//char by char comparisation iterates only throught line; names could be even longer
-				if (j + offset < names[i].size()) fits = false;
-				//mark string instead of removing him to prevent movement in the container
-				if (!fits) names[i] = "";
+				parserLog(par::LogLvl::Warning, "Entry has no matches.");
+				continue;
 			}
+			//filesystem is not case sensitve while wildcardMatch() is
+			utils::toLower(line);
+			utils::wildcardMatch(line, names,  begin);
+			//the complete path has to be added again
+			for (size_t i = begin; i < names.size(); ++i)
+				if (names[i] != "") names[i] = pathLocal + names[i];
 		}
 		//the filename is correct
-		else names.push_back(line);
+		else names.push_back(pathLocal + line);
 
-		//convert the ending to lowercase for easier comparison
-		std::transform(line.begin() + endPos, line.end(), line.begin() + endPos, ::tolower);
+	}//end while
 
-		//check the file ending; since only two chars are checked other endings like ".dpp" are valid aswell
-		if (!memcmp((char*)&line[endPos], ".d", 2))
+	LOG(INFO) << "Starting tokenizing.";
+	clock_t begin = clock();
+
+	//threads
+	std::vector < std::thread > lexerThreads;
+	std::vector < std::unique_ptr < Lexer > > lexers;
+	vector < vector< CodeToParse > > definitionsToParse; //one set of definitions to parse per lexer
+	//now parse all retrieved names
+	for (auto& name : names)
+	{
+		//skip empty ones
+		if (name == "") continue;
+		//convert file ending to lower case for easy comparisation
+		auto begin = name.begin() + name.size() - 5;
+		std::transform(begin, name.end(), begin, ::tolower);
+		if (!memcmp((char*)&name[name.size() - 5], ".src", 4))
 		{
-			for (auto& fileName : names)
-			{
-				if (fileName.size())
-				{
-					if (parseFile(pathLocal + fileName) == -1) return; //parse a code file
-				}
-			}
+			parseSource(name);
 		}
-		else if (!memcmp((char*)&line[endPos], ".src", 4))
+		else
 		{
-			for (auto& fileName : names)
-				if (fileName.size()) parseSource(pathLocal + fileName); //parse a source-file
+			lexers.emplace_back(new Lexer(name));//store file name to be able to display it in error messages
+			lexerThreads.emplace_back(&Parser::tokenizeFile, m_config.m_sourceDir + name, lexers.back().get());
 		}
+	}
+	//make shure that all lexers have finished
+	for (auto& lexerThread : lexerThreads) lexerThread.join();
+	clock_t end = clock();
+	LOG(INFO) << "Finished tokenizing in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
 
-//		cout << line << endl;
+	definitionsToParse.resize(lexers.size());
+	//the actual declaration parsing process begins
+	for (int i = 0; i < (int)lexers.size(); ++i)
+	{
+		m_codeQue = &definitionsToParse[i];
+		parseFile(*lexers[i]);
+	}
+
+	//finally parse function definitions
+	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
+	{
+		m_lexer = lexers[i].get();
+		for (auto& codeToParse : definitionsToParse[i])
+			parseCodeBlock(codeToParse);
 	}
 }
 
 // ***************************************************** //
 
-int Parser::parseFile(const std::string& _fileName)
+void Parser::tokenizeFile(const std::string& _fileName, Lexer* _lexer)
 {
-	std::ifstream in(m_sourceDir + _fileName.c_str(), std::ios::in | std::ios::binary);
+	std::ifstream in(_fileName.c_str(), std::ios::in | std::ios::binary);
 
 	//check if file is valid
 	if (!in)
 	{
 		LOG(ERROR) << "Code-File " << _fileName << " not found.";
-		return -1;
+		return;
 	}
 
-	m_currentFileName = _fileName;
+	string fileContent;
 
 	// put filecontent into a string
 	in.seekg(0, std::ios::end);
-	m_currentFile.reserve(in.tellg());
+	fileContent.reserve(in.tellg());
 	in.seekg(0, std::ios::beg);
 
-	m_currentFile.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	fileContent.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
 	//if (!m_caseSensitive) std::transform(m_currentFile.begin(), m_currentFile.end(), m_currentFile.begin(), ::tolower);
 
 
-	LOG(INFO) << "Parsing Code-File " << _fileName;
+//	LOG(INFO) << "Parsing Code-File " << _fileName;
 
 	// split into tokens
-	// and convert to uppercase
-	m_lexer.analyse();
-	
-	//reset file specific vars
-	//useless now?
-	m_lineCount = 0;
+	// and convert to lowercase
+	_lexer->analyse(std::move(fileContent)); //fileContent is invalid now
+
+}
+
+int Parser::parseFile(Lexer& _lexer)
+{
+	//set current lexer
+	m_lexer = &_lexer;
+
+	LOG(INFO) << "Parsing Code-File " << m_lexer->getDataName();
 
 	Token* pToken;
-
 	//translated part from zParser
 	//ParseFile
 
-	while (pToken = m_lexer.nextToken())
+	while (pToken = m_lexer->nextToken())
 	{
 		if (pToken->type != TokenType::Symbol)
 		{
@@ -257,27 +256,27 @@ int Parser::parseFile(const std::string& _fileName)
 
 		int len = 1 + pToken->end - pToken->begin;
 
-		if (!m_currentFile.compare(pToken->begin, len, "const"))
+		if (m_lexer->compare(*pToken, "const"))
 		{
 			returnCode = declareVar(1, m_gameData.m_symbols);
 		}
-		else if (!m_currentFile.compare(pToken->begin, len, "var"))
+		else if (m_lexer->compare(*pToken, "var"))
 		{
 			returnCode = declareVar(0, m_gameData.m_symbols);
 		}
-		else if (!m_currentFile.compare(pToken->begin, len, "func"))
+		else if (m_lexer->compare(*pToken, "func"))
 		{
 			returnCode = declareFunc();
 		}
-		else if (!m_currentFile.compare(pToken->begin, len, "class"))
+		else if (m_lexer->compare(*pToken, "class"))
 		{
 			returnCode = declareClass();
 		}
-		else if (!m_currentFile.compare(pToken->begin, len, "instance"))
+		else if (m_lexer->compare(*pToken, "instance"))
 		{
 			returnCode = declareInstance();
 		}
-		else if (!m_currentFile.compare(pToken->begin, len, "prototype"))
+		else if (m_lexer->compare(*pToken, "prototype"))
 		{
 			returnCode = declarePrototype();
 		}
@@ -287,10 +286,12 @@ int Parser::parseFile(const std::string& _fileName)
 			//gothic.exe checks against some kind of zero aswell
 			//maybe for empty files
 			//LOG(ERROR) << m_currentFile.substr(begin, m_pp - begin) << " is not a recognized symbol.";
-			PARSINGERROR(m_currentFile.substr(pToken->begin, len) + " is not a recognized symbol type.", pToken);
+			PARSINGERROR("Uknown symbol type.", pToken);
 		}
 		if (returnCode == -1) return -1;
 	}
+
+	//now all symbols are known -> parse function definitions
 
 	return 0;
 }
@@ -312,7 +313,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 
 	TOKENEXT(Symbol, typeToken);
 
-	string word(m_lexer.getWord(*typeToken));
+	string word(m_lexer->getWord(*typeToken));
 
 	//validate type
 	int index = utils::find(m_gameData.m_types, word);
@@ -326,42 +327,42 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 	do
 	{
 		//get name
-		nameToken = m_lexer.nextToken();
+		nameToken = m_lexer->nextToken();
 		if (!nameToken || nameToken->type != Symbol)
 		{
 			PARSINGERROR("Word expected.", nameToken);
 		}
 
 		//now filled with the name
-		word = m_lexer.getWord(*nameToken);
+		word = m_lexer->getWord(*nameToken);
 
 		arraySize = 1;
 
 		//array declaration
 		//or end expression: ';'
-		token = m_lexer.nextToken();
+		token = m_lexer->nextToken();
 		NULLCHECK(token);
 
 		//array declaration
 		if (*token == SquareBracketLeft)
 		{
-			token = m_lexer.nextToken();
+			token = m_lexer->nextToken();
 			NULLCHECK(token);
 
 			if (*token != TokenType::ConstInt)
 			{
-				int constIndex = utils::find(m_gameData.m_constSymbols, m_lexer.getWord(*token));
+				int constIndex = utils::find(m_gameData.m_constSymbols, m_lexer->getWord(*token));
 
 				if (constIndex != -1) arraySize = ((ConstSymbol_Int&)m_gameData.m_constSymbols[constIndex]).value[0];
 				else PARSINGERROR("Const int expected.", token);
 			}
 			else
-				arraySize = m_lexer.getInt(*token);
+				arraySize = m_lexer->getInt(*token);
 
 			TOKEN(SquareBracketRight);
 
 			//read next one
-			token = m_lexer.nextToken();
+			token = m_lexer->nextToken();
 			NULLCHECK(token);
 		}
 
@@ -381,7 +382,8 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		return 0;
 	}
 	//constants need to be initialized instantly
-	else if (m_currentFile[token->begin] == '=')
+	//todo make this faster 
+	else if (m_lexer->getWord(*token) == "=")
 	{
 		//const arrays start with '{'
 		if (arraySize > 1) TOKEN(CurlyBracketLeft);
@@ -402,6 +404,8 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
+
+			m_gameData.m_constSymbols.push_back(*symbol);
 		}
 		else if (index == 1)
 		{
@@ -417,6 +421,8 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
+
+			m_gameData.m_constSymbols.push_back(*symbol);
 		}
 		else if (index == 3)
 		{
@@ -427,7 +433,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 			for (int i = 0; i < arraySize; ++i)
 			{
 				TOKENEXT(TokenType::ConstStr, strToken);
-				constSymbol->value[i] = std::move(m_lexer.getWord(*strToken));
+				constSymbol->value[i] = std::move(m_lexer->getWord(*strToken));
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
 		}
@@ -438,7 +444,6 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		TOKEN(End);
 
 		m_gameData.m_symbols.add(symbol);
-		m_gameData.m_constSymbols.push_back(*symbol);
 
 		return 0;
 	}
@@ -453,7 +458,7 @@ int Parser::declareFunc()
 	TOKENEXT(Symbol, typeToken);
 	TOKENEXT(Symbol, nameToken);
 
-	string name = m_lexer.getWord(*nameToken);
+	string name = m_lexer->getWord(*nameToken);
 	
 	m_gameData.m_symbols.add(new Symbol_Function(name, getType(*typeToken)));
 	game::Symbol_Function& functionSymbol = (Symbol_Function&)m_gameData.m_symbols.back();
@@ -466,7 +471,7 @@ int Parser::declareFunc()
 	//optional param list
 	if (!TOKENOPT(ParenthesisRight))
 	{
-		m_lexer.prev();
+		m_lexer->prev();
 		do
 		{
 			//actually only 'var' is valid
@@ -479,14 +484,14 @@ int Parser::declareFunc()
 
 			//add and fix parent if necessary
 			int type = getType(*paramTypeToken);
-			functionSymbol.params.emplace(m_lexer.getWord(*paramNameToken), type);
+			functionSymbol.params.emplace(m_lexer->getWord(*paramNameToken), type);
 			if (type >= g_atomTypeCount) functionSymbol.params.back().parent = m_gameData.m_types[type].id;
 			//todo: build uniform way to fix parent
 
 		} while (TOKENOPT(Comma));
 
 		//failed optional token
-		m_lexer.prev();
+		m_lexer->prev();
 
 		TOKEN(ParenthesisRight);
 	}
@@ -501,12 +506,12 @@ int Parser::declareFunc()
 		return 0;
 	}
 
-	m_lexer.prev();
+	m_lexer->prev();
 
 	assignFunctionParam(functionSymbol);
 
 	//code block
-	parseCodeBlock(functionSymbol);
+	codeBlock(functionSymbol);
 	
 /*	if (!TOKENOPT(End))
 	{
@@ -515,7 +520,7 @@ int Parser::declareFunc()
 			PARSINGERROR("End';' expected.", tokenOpt);
 		}
 		else //read token is part of the next declaration
-			m_lexer.prev();
+			m_lexer->prev();
 	}*/
 
 	//always end with a return
@@ -539,11 +544,11 @@ int Parser::declareInstance()
 	{
 		TOKENEXT(Symbol, nameToken);
 
-		names.push_back(m_lexer.getWord(*nameToken));
+		names.push_back(m_lexer->getWord(*nameToken));
 
 	} while (TOKENOPT(Comma));
 
-	m_lexer.prev();
+	m_lexer->prev();
 
 	TOKEN(ParenthesisLeft);
 
@@ -559,7 +564,7 @@ int Parser::declareInstance()
 
 	if (i == -1)
 	{
-		i = utils::find(m_gameData.m_prototypes, m_lexer.getWord(*typeToken));
+		i = utils::find(m_gameData.m_prototypes, m_lexer->getWord(*typeToken));
 
 		if(i == -1) PARSINGERROR("Unknown type.", typeToken);
 
@@ -570,7 +575,7 @@ int Parser::declareInstance()
 		{
 			if (m_gameData.m_types[j].id == m_gameData.m_prototypes[i].parent)
 			{
-				instance.type = j;
+				instance.type = (unsigned int)j;
 			}
 		}
 		instance.parent = m_gameData.m_prototypes[i].id;
@@ -584,12 +589,12 @@ int Parser::declareInstance()
 
 	if(!TOKENOPT(End))
 	{
-		m_lexer.prev();
+		m_lexer->prev();
 
 		m_currentNamespace = &m_gameData.m_types[instance.type];
 		m_thisInst = instance.parent;
 
-		parseCodeBlock(instance);
+		codeBlock(instance);
 
 		m_currentNamespace = nullptr;
 
@@ -621,7 +626,7 @@ int Parser::declarePrototype()
 
 	TOKENEXT(Symbol, nameToken);
 
-	name = m_lexer.getWord(*nameToken);
+	name = m_lexer->getWord(*nameToken);
 
 	TOKEN(ParenthesisLeft);
 
@@ -645,7 +650,7 @@ int Parser::declarePrototype()
 	m_currentNamespace = &m_gameData.m_types[i];
 	m_thisInst = prototype.parent;
 
-	parseCodeBlock(prototype);
+	codeBlock(prototype);
 
 	m_currentNamespace = nullptr;
 
@@ -656,7 +661,7 @@ int Parser::declarePrototype()
 			PARSINGERROR("End';' expected.", tokenOpt);
 		}
 		else //read token is part of the next declaration
-			m_lexer.prev();
+			m_lexer->prev();
 	}*/
 
 	return 0;
@@ -664,19 +669,18 @@ int Parser::declarePrototype()
 
 // ***************************************************** //
 
-
 int Parser::declareClass()
 {
 	//get name
-	Token* token = m_lexer.nextToken();
+	Token* token = m_lexer->nextToken();
 	if (!token || token->type != Symbol)
 	{
 		PARSINGERROR("Word expected.", token);
 	}
 
-	string word = m_lexer.getWord(*token);
+	string word = m_lexer->getWord(*token);
 
-	token = m_lexer.nextToken();
+	token = m_lexer->nextToken();
 
 	if (!token || token->type != CurlyBracketLeft)
 	{
@@ -689,7 +693,7 @@ int Parser::declareClass()
 
 	int ret = 0;
 	//parse all members
-	while ((token = m_lexer.nextToken()) && ret != -1 && !m_currentFile.compare(token->begin, 1 + token->end - token->begin, "var"))
+	while ((token = m_lexer->nextToken()) && ret != -1 && m_lexer->compare(*token, "var"))
 		ret = declareVar(0, type.elem);
 
 	for (size_t i = 0; i < type.elem.size(); ++i)
@@ -711,18 +715,18 @@ int Parser::declareClass()
 
 	//gothic declarations always close with ';'
 	
-	token = m_lexer.nextToken();
+	token = m_lexer->nextToken();
 
 	NULLCHECK(token);
 
 	if (token->type != End)
 	{
-		if (m_alwaysSemikolon)
+		if (m_config.m_alwaysSemikolon)
 		{
 			PARSINGERROR("End';' expected.", token);
 		}
 		else //read token is part of the next declaration
-			m_lexer.prev();
+			m_lexer->prev();
 	}
 
 	return 0;
@@ -749,29 +753,29 @@ void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token)
 	if (_token)
 	{
 		for (unsigned int i = 0; i < _token->begin; ++i)
-			if (m_currentFile[i] == '\n') ++lineCount;
+			if (m_lexer->getRawText()[i] == '\n') ++lineCount;
 
-		msg = "Found: \"" + m_lexer.getWord(*_token) + "\" - ";
+		msg = "Found: \"" + m_lexer->getWord(*_token) + "\" - ";
 	}
 
 	msg += _msg;
 
 	//since ERROR and WARNING are forwarded by a macro runtime evaluation needs a switch
 	if (_lvl == Error)
-		LOG(ERROR) << msg << " [l." << lineCount << "] " << "[" << m_currentFileName << "]";
+		LOG(ERROR) << msg << " [l." << lineCount << "] " << "[" << m_lexer->getDataName() << "]";
 	else if (_lvl == Warning)
-		LOG(WARNING) << msg << " [l." << lineCount << "] " << "[" << m_currentFileName << "]";
+		LOG(WARNING) << msg << " [l." << lineCount << "] " << "[" << m_lexer->getDataName() << "]";
 
 	//show +- 3 lines of the code where the error was found
-	if (m_showCodeSegmentOnError && _token)
+	if (m_config.m_showCodeSegmentOnError && _token)
 	{	
-		std::cout << utils::strInterval(m_currentFile, _token->begin, _token->end, 3)  << endl << endl;
+		std::cout << utils::strInterval(m_lexer->getRawText(), _token->begin, _token->end, 3) << endl << endl;
 	}
 }
 
 int Parser::getType(Token& _token)
 {
-	return utils::find(m_gameData.m_types,m_lexer.getWord(_token));
+	return utils::find(m_gameData.m_types,m_lexer->getWord(_token));
 }
 
 }

@@ -11,20 +11,21 @@
 #define PARSINGERROR(a,b) {parserLog(Error, a, b); return -1;} 
 
 //checks a Token* and handles the error
-#define NULLCHECK(a) if(!a) {m_lexer.prev(); parserLog(Error, "Unexepected end of file.", m_lexer.nextToken()); return -1;} 
+#define NULLCHECK(a) if(!a) {m_lexer->prev(); parserLog(Error, "Unexepected end of file.", m_lexer->nextToken()); return -1;} 
 
 //easy token reading from the stream including error checks
-#define TOKEN(type) {Token* tokenIntern = m_lexer.nextToken(); NULLCHECK(tokenIntern); if(*tokenIntern != type) PARSINGERROR("Unexpected token.",tokenIntern) }
+#define TOKEN(type) {Token* tokenIntern = m_lexer->nextToken(); NULLCHECK(tokenIntern); if(*tokenIntern != type) PARSINGERROR("Unexpected token.",tokenIntern) }
 //declares a token pointer with the given name
 //thus it is not in its own scope
-#define TOKENEXT(type, tokenPtr) Token* tokenPtr = m_lexer.nextToken(); NULLCHECK(tokenPtr); if(*tokenPtr != type) PARSINGERROR("Unexpected token.",tokenPtr)
-#define TOKENOPT(type) (((tokenOpt = m_lexer.nextToken()) && *tokenOpt == type))
+#define TOKENEXT(type, tokenPtr) Token* tokenPtr = m_lexer->nextToken(); NULLCHECK(tokenPtr); if(*tokenPtr != type) PARSINGERROR("Unexpected token.",tokenPtr)
+#define TOKENOPT(type) (((tokenOpt = m_lexer->nextToken()) && *tokenOpt == type))
 
 //the standard check for ';' that takes into account the setting "alwaysSemikolon"
-#define SEMIKOLON if (!TOKENOPT(End)){if (m_alwaysSemikolon){PARSINGERROR("End';' expected.", tokenOpt);}else m_lexer.prev();}
+#define SEMIKOLON if (!TOKENOPT(End)){if (m_config.m_alwaysSemikolon){PARSINGERROR("Expression end';' expected.", tokenOpt);}else m_lexer->prev();}
 
 /* Array *************
- * A simple dynamic buffer with size = capacity
+ * A simple and light dynamic buffer with size = capacity
+ * and only one initialisation
  */
 template< typename _T >
 class Array
@@ -68,6 +69,8 @@ private:
 };
 
 namespace par{
+
+	typedef game::Symbol_Type Namespace;
 
 	/*a token wich can hold terms
 	 * operands(terms are valid aswell) are managed in a tree structure
@@ -135,12 +138,15 @@ namespace par{
 	class CodeToParse
 	{
 	public:
-		CodeToParse(std::list< par::Token >::iterator& _tokenIt, game::Symbol_Function& _function) :
+		CodeToParse(std::list< par::Token >::iterator _tokenIt, game::Symbol_Function& _function, Namespace* _namespace = nullptr) :
 			m_tokenIt(_tokenIt),
-			m_function(_function)
-		{};
-	private:
+			m_function(_function),
+			m_namespace(_namespace)
+		{
+		};
+	
 		std::list< par::Token >::iterator m_tokenIt; //token referencing to the '{'
 		game::Symbol_Function& m_function; //function that takes the code
+		Namespace* m_namespace;
 	};
 }

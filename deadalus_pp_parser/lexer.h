@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <vector>
 #include <string>
 
 namespace par{
@@ -82,7 +83,8 @@ struct Token
 class Lexer
 {
 public:
-	Lexer(std::string& _text);
+	Lexer() = default;
+	Lexer(std::string& _dataName);
 	~Lexer();
 
 	/* analyse() ***************************
@@ -90,7 +92,7 @@ public:
 	 * preserving the order
 	 * resets the token stream
 	 */
-	void analyse();
+	void analyse(std::string&& _text);
 
 	/* access operators*/
 
@@ -118,6 +120,12 @@ public:
 	 */
 	void setTokenIt(std::list < Token >::iterator& _it) { m_iterator = _it; };
 
+	/* setItToToken()
+	 * Sets the iterator to point to the current check.
+	 * Throws an error when the token is not in the list.
+	 */
+	void setItToToken(par::Token& _tok) { m_iterator = m_tokens.begin(); while (_tok != *m_iterator) m_iterator++; };
+
 	/* getWord() ***************************
 	 * Retrieves the token as string
 	 */
@@ -140,12 +148,18 @@ public:
 	*/
 	bool compare(const Token& _token, const std::string& _str);
 
+	const std::string& getRawText() { return m_text; };
+	void setDataName(const std::string& _str) { m_dataName = _str; };
+	const std::string& getDataName() { return m_dataName; };
 private:
-	bool isValidChar(char _c);
+	inline bool isValidChar(char _c);
+	//std::list
+	//performance with list: 0.4547
 	std::list < Token > m_tokens;
 	std::list < Token >::iterator m_iterator;
 
-	std::string& m_text;
+	std::string m_text;
+	std::string m_dataName; // a name associated with the text
 };
 
 }
