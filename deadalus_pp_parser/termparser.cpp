@@ -334,7 +334,8 @@ namespace par{
 					(*it)->type = returnSym->type;
 					op.param.resize(operatorType.paramCount);
 
-				/*	if (lang::operators[op.value].associativity == lang::LtR)
+					//member access is the only operator that is handled ltr
+					if (operatorType.op == ".")
 					{
 						param0 = param1;
 						for (int i = 0; i < operatorType.paramCount; ++i)
@@ -343,7 +344,7 @@ namespace par{
 							param0++;
 						}
 					}
-					else*/ //assignment takes its params right to left
+					else //assignment takes its params right to left ; actually every regular operator
 					{
 						param0 = it;
 
