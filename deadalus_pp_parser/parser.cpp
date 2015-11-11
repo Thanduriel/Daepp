@@ -50,16 +50,83 @@ Parser::Parser(const std::string& _configFile)
 	m_config.m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
 }
 
+// ***************************************************** //
 
-Parser::~Parser()
+void Parser::parse(const std::string& _fileName)
 {
+	std::vector< string > names;
+
+	parseSource(_fileName, names);
+
+	LOG(INFO) << "Starting tokenizing.";
+	clock_t begin = clock();
+
+	//threads
+	std::vector < std::thread > lexerThreads;
+	std::vector < std::unique_ptr < Lexer > > lexers;
+	vector < vector< CodeToParse > > definitionsToParse; //one set of definitions to parse per lexer
+	//now parse all retrieved names
+	for (auto& name : names)
+	{
+		lexers.emplace_back(new Lexer(name));//store file name to be able to display it in error messages
+		lexerThreads.emplace_back(&Parser::tokenizeFile, m_config.m_sourceDir + name, lexers.back().get());
+	}
+	//make shure that all lexers have finished
+	for (auto& lexerThread : lexerThreads) lexerThread.join();
+	clock_t end = clock();
+	LOG(INFO) << "Finished tokenizing in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
+
+	LOG(INFO) << "Parsing code files.";
+	definitionsToParse.resize(lexers.size());
+	//the actual declaration parsing process begins
+	for (int i = 0; i < (int)lexers.size(); ++i)
+	{
+		m_codeQue = &definitionsToParse[i];
+		parseFile(*lexers[i]);
+	}
+
+	//finally parse function definitions
+	LOG(INFO) << "Parsing function definitions.";
+	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
+	{
+		m_lexer = lexers[i].get();
+		for (auto& codeToParse : definitionsToParse[i])
+			parseCodeBlock(codeToParse);
+	}
+	
+	//add members to the main table to get them compiled
+	for (auto i = g_atomTypeCount; i < m_gameData.m_types.size(); ++i)
+	{
+		//add namespace prefix
+		for (int c = 0; c < (int)m_gameData.m_types[i].elem.size(); ++c)
+			m_gameData.m_types[i].elem[c].name = m_gameData.m_types[i].name + '.' + m_gameData.m_types[i].elem[c].name;
+
+		int index = m_gameData.m_symbols.find(m_gameData.m_types[i].name);
+		m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, m_gameData.m_types[i].elem);
+	}
+
+	//add the local vars, params 
+	//after all functions have been parsed because it is not possible to find them
+/*	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
+	{
+		for (auto& codeToParse : definitionsToParse[i])
+		{
+			Symbol_Function& function = codeToParse.m_function;
+
+			//add namespace prefix
+			function.finalizeNames();
+
+			int index = m_gameData.m_symbols.find(codeToParse.m_function.name);
+			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, codeToParse.m_function.params);
+			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index + codeToParse.m_function.params.size(), codeToParse.m_function.locals);
+		}
+	}*/
 }
 
-void foo(const std::string& _bla, Lexer* _lex){};
+// ***************************************************** //
 
-void Parser::parseSource(const std::string& _fileName)
+void Parser::parseSource(const std::string& _fileName, std::vector< string >& _names)
 {
-
 	std::ifstream in(m_config.m_sourceDir + _fileName.c_str(), std::ios::in | std::ios::binary);
 
 	//check if file is valid
@@ -76,7 +143,8 @@ void Parser::parseSource(const std::string& _fileName)
 	//_fileName.substr(0, _fileName.find_last_of('\\'));
 	//string path = pathEnd == string::npos ? "" : string(_fileName.begin(), _fileName.begin() + pathEnd);
 
-	std::vector< string > names;
+	vector< string > names;
+
 	//parse the file line by line
 	string line;
 	while (getline(in, line))
@@ -144,61 +212,31 @@ void Parser::parseSource(const std::string& _fileName)
 			}
 			//filesystem is not case sensitve while wildcardMatch() is
 			utils::toLower(line);
-			utils::wildcardMatch(line, names,  begin);
+			utils::wildcardMatch(line, names, begin);
 			//the complete path has to be added again
 			for (size_t i = begin; i < names.size(); ++i)
 				if (names[i] != "") names[i] = pathLocal + names[i];
 		}
 		//the filename is correct
-		else names.push_back(pathLocal + line);
-
-	}//end while
-
-	LOG(INFO) << "Starting tokenizing.";
-	clock_t begin = clock();
-
-	//threads
-	std::vector < std::thread > lexerThreads;
-	std::vector < std::unique_ptr < Lexer > > lexers;
-	vector < vector< CodeToParse > > definitionsToParse; //one set of definitions to parse per lexer
-	//now parse all retrieved names
-	for (auto& name : names)
-	{
-		//skip empty ones
-		if (name == "") continue;
-		//convert file ending to lower case for easy comparisation
-		auto begin = name.begin() + name.size() - 5;
-		std::transform(begin, name.end(), begin, ::tolower);
-		if (!memcmp((char*)&name[name.size() - 5], ".src", 4))
-		{
-			parseSource(name);
-		}
 		else
 		{
-			lexers.emplace_back(new Lexer(name));//store file name to be able to display it in error messages
-			lexerThreads.emplace_back(&Parser::tokenizeFile, m_config.m_sourceDir + name, lexers.back().get());
+			names.push_back(pathLocal + line);
+			utils::toLower(names.back());
 		}
-	}
-	//make shure that all lexers have finished
-	for (auto& lexerThread : lexerThreads) lexerThread.join();
-	clock_t end = clock();
-	LOG(INFO) << "Finished tokenizing in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
 
-	definitionsToParse.resize(lexers.size());
-	//the actual declaration parsing process begins
-	for (int i = 0; i < (int)lexers.size(); ++i)
+	}//end while
+	
+	//move valid names to _names
+	for (auto& name : names)
 	{
-		m_codeQue = &definitionsToParse[i];
-		parseFile(*lexers[i]);
+		if (name == "") continue;
+
+		if (!memcmp((char*)&name[name.size() - 5], ".src", 4))
+			parseSource(name, _names);
+		else
+			_names.push_back(std::move(name));
 	}
 
-	//finally parse function definitions
-	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
-	{
-		m_lexer = lexers[i].get();
-		for (auto& codeToParse : definitionsToParse[i])
-			parseCodeBlock(codeToParse);
-	}
 }
 
 // ***************************************************** //
@@ -462,6 +500,7 @@ int Parser::declareFunc()
 	
 	m_gameData.m_symbols.add(new Symbol_Function(name, getType(*typeToken)));
 	game::Symbol_Function& functionSymbol = (Symbol_Function&)m_gameData.m_symbols.back();
+	m_gameData.m_functions.push_back(functionSymbol);
 
 	TOKEN(ParenthesisLeft);
 
@@ -485,7 +524,7 @@ int Parser::declareFunc()
 			//add and fix parent if necessary
 			int type = getType(*paramTypeToken);
 			functionSymbol.params.emplace(m_lexer->getWord(*paramNameToken), type);
-			if (type >= g_atomTypeCount) functionSymbol.params.back().parent = m_gameData.m_types[type].id;
+			if (type >= g_atomTypeCount) functionSymbol.params.back().parent.ptr = &m_gameData.m_types[type];
 			//todo: build uniform way to fix parent
 
 		} while (TOKENOPT(Comma));
@@ -573,16 +612,16 @@ int Parser::declareInstance()
 
 		for (size_t j = 0; j < m_gameData.m_types.size(); ++j)
 		{
-			if (m_gameData.m_types[j].id == m_gameData.m_prototypes[i].parent)
+			if (&m_gameData.m_types[j] == m_gameData.m_prototypes[i].parent.ptr)
 			{
 				instance.type = (unsigned int)j;
 			}
 		}
-		instance.parent = m_gameData.m_prototypes[i].id;
+		instance.parent.ptr = &m_gameData.m_prototypes[i];
 	}
 	else
 	{
-		instance.parent = m_gameData.m_types[i].id;
+		instance.parent.ptr = &m_gameData.m_types[i];
 	}
 
 	TOKEN(ParenthesisRight);
@@ -592,7 +631,7 @@ int Parser::declareInstance()
 		m_lexer->prev();
 
 		m_currentNamespace = &m_gameData.m_types[instance.type];
-		m_thisInst = instance.parent;
+		m_thisInst = instance.parent.ptr;
 
 		codeBlock(instance);
 
@@ -644,25 +683,15 @@ int Parser::declarePrototype()
 	m_gameData.m_prototypes.push_back(prototype);
 
 	prototype.type = 6; //type is prototype...
-	prototype.parent = m_gameData.m_types[i].id;
+	prototype.parent.ptr = &m_gameData.m_types[i];
 
 	// init the stack state
 	m_currentNamespace = &m_gameData.m_types[i];
-	m_thisInst = prototype.parent;
+	m_thisInst = prototype.parent.ptr;
 
 	codeBlock(prototype);
 
 	m_currentNamespace = nullptr;
-
-/*	if (!TOKENOPT(End))
-	{
-		if (m_alwaysSemikolon)
-		{
-			PARSINGERROR("End';' expected.", tokenOpt);
-		}
-		else //read token is part of the next declaration
-			m_lexer->prev();
-	}*/
 
 	return 0;
 }
@@ -699,7 +728,7 @@ int Parser::declareClass()
 	for (size_t i = 0; i < type.elem.size(); ++i)
 	{
 		type.elem[i].setFlag(game::Flag::Classvar);
-		type.elem[i].parent = type.id;
+		type.elem[i].parent.ptr = &type;
 	}
 
 	if (ret == -1) return -1;

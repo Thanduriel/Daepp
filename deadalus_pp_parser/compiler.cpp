@@ -16,6 +16,12 @@ namespace par{
 
 	int Compiler::compile(const std::string& _outputFile, bool _saveInOrder)
 	{
+		//move every symbol into m_symbols
+		exportFunctionMembers();
+		addConstStrings();
+
+		updateVirtualIds();
+
 		fileStream.open(_outputFile, std::ios::out | std::ios::binary);
 
 		if (!fileStream) LOG(ERROR) << "Could not create file " << _outputFile << ".";
@@ -28,7 +34,7 @@ namespace par{
 		fileStream << (unsigned char)0x32;
 
 		//(int)[] symbol identifiers(id)
-		unsigned int symbolCount = game::Symbol::idCount;
+		unsigned int symbolCount = (unsigned int)m_gameData.m_symbols.size();
 
 		//(int) number of symbols
 		fileStream.write((char*)&symbolCount, 4);
@@ -45,9 +51,9 @@ namespace par{
 			size_t c = 0;
 			
 			//compile in order
-			for (size_t i = 0; i < game::Symbol::idCount; ++i)
+			for (size_t i = 0; i < m_gameData.m_symbols.size(); ++i)
 			{
-				game::Symbol* symbol = &game::Symbol::getById(i);
+				game::Symbol* symbol = &m_gameData.m_symbols[i];
 
 				if (dynamic_cast<game::Symbol_Type*> (symbol))
 				{
@@ -72,6 +78,58 @@ namespace par{
 		fileStream.close();
 
 		return 0;
+	}
+
+	// ************************************************************* //
+
+	void Compiler::updateVirtualIds()
+	{
+		//set all ids
+		for (int i = 0; i < (int)m_gameData.m_symbols.size(); ++i)
+		{
+			m_gameData.m_symbols[i].id = i;
+		}
+
+		//update all parents
+		for (size_t i = 0; i < m_gameData.m_symbols.size(); ++i)
+		{
+			//everthing that differs from the default value should be a ptr
+			if (m_gameData.m_symbols[i].parent.id != 0xFFFFFFFF)
+				m_gameData.m_symbols[i].parent.id = m_gameData.m_symbols[i].parent.ptr->id;
+		}
+
+		//update of the relevant instructions happens in compileFunction
+	}
+
+	// ************************************************************* //
+
+	void Compiler::addConstStrings()
+	{
+		//since they are added to the end this will be the ids
+		for (int i = 0; i < m_gameData.m_internStrings.size(); ++i)
+		{
+			//the name is generated using the id and adding a 0xFF to the front
+			//this seems to be the way the original parser is doing it
+			m_gameData.m_internStrings[i]->name = char(0xFF) + std::to_string(i + m_gameData.m_symbols.size());
+		}
+		m_gameData.m_symbols.insert(m_gameData.m_symbols.end() - 1, m_gameData.m_internStrings);
+	}
+
+	// ************************************************************* //
+
+	void Compiler::exportFunctionMembers()
+	{
+		for (int i = 0; i < m_gameData.m_functions.size(); ++i)
+		{
+			game::Symbol_Function& function = m_gameData.m_functions[i];
+
+			//add namespace prefix
+			function.finalizeNames();
+
+			int index = m_gameData.m_symbols.find(function.name);
+			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, function.params);
+			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index + function.params.size(), function.locals);
+		}
 	}
 
 	// ************************************************************* //
@@ -150,13 +208,13 @@ namespace par{
 
 		parent = _sym.id;
 
-		for (int i = 0; i < _sym.elem.size(); ++i)
+	/*	for (int i = 0; i < _sym.elem.size(); ++i)
 		{
 			//add name to it
 			_sym.elem[i].name = _sym.name + '.' + _sym.elem[i].name;
 
 		//	compileSymbol(_sym.elem[i]);
-		}
+		}*/
 
 		return 0;
 	}
@@ -182,8 +240,7 @@ namespace par{
 		offset = 0;
 
 		//after the function params and locals follow
-
-		for (int i = 0; i < _sym.params.size(); ++i)
+/*		for (int i = 0; i < _sym.params.size(); ++i)
 		{
 			_sym.params[i].name = _sym.name + '.' + _sym.params[i].name;
 		}
@@ -191,7 +248,7 @@ namespace par{
 		for (int i = 0; i < _sym.locals.size(); ++i)
 		{
 			_sym.locals[i].name = _sym.name + '.' + _sym.locals[i].name;
-		}
+		}*/
 
 		return true;
 	}
@@ -217,16 +274,26 @@ namespace par{
 			int opCode = inst.instruction;
 			fileStream.write((char*)&opCode, 1);
 
+			//update virtual ids from ptrs to actual int ids.
+			for (auto& refParInstr : game::referenceParamInstructions)
+			{
+				if (opCode == refParInstr && inst.hasParam)
+				{
+					inst.param.id = inst.param.ptr->id;
+					break;
+				}
+			}
+
 			//calls take a direct stack adr as param
 			// array indecies can be mistaken for call instructions but have hasParam==false
 			if (opCode == game::Instruction::call && inst.hasParam)
 			{
-				inst.param = ((game::Symbol_Function*)&game::Symbol::getById(inst.param))->stackBegin;
+				inst.param.sadr = ((game::Symbol_Function*)inst.param.ptr)->stackBegin;
 			}
 			//jumps are direct stack addresses
 			else if (opCode == game::Instruction::jmp || opCode == game::Instruction::jmpf)
 			{
-				inst.param += _offset;
+				inst.param.sadr += _offset;
 			}
 			//optional param
 			if (inst.hasParam) fileStream.write((char*)&inst.param, 4);

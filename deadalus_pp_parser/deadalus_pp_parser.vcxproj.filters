@@ -95,9 +95,6 @@
     <ClCompile Include="operators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="symbol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="compiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,6 +109,9 @@
     </ClCompile>
     <ClCompile Include="codeparser.cpp">
       <Filter>parser</Filter>
+    </ClCompile>
+    <ClCompile Include="symbol.cpp">
+      <Filter>game</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

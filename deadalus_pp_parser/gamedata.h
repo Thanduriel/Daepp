@@ -30,9 +30,13 @@ namespace game{
 		utils::ReferenceContainer < game::Symbol_Type > m_types;
 		utils::ReferenceContainer < game::Symbol_Instance > m_prototypes;
 
-		//not part of all symbols since their names are generated and thus not an identifier
-		//and no searching for them takes place
-		std::deque< game::ConstSymbol_String > m_internStrings;
+		//functions (only real functions) to fix params and locals
+		utils::ReferenceContainer < game::Symbol_Function > m_functions;
+
+		//Const strings are not part of m_symbols since their names are generated and thus not an identifier
+		//and no searching for them takes place.
+		//However their references need to remain valid.
+		std::deque< std::unique_ptr < game::Symbol> > m_internStrings;
 
 	};
 }

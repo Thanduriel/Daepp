@@ -1,7 +1,7 @@
 #pragma once
 
 #include "symbol.h"
-
+#include <array>
 
 namespace game{
 	// structures for bytecode
@@ -59,21 +59,30 @@ namespace game{
 		Unop
 	};
 
+	//all instructions that take a reference (int id) to a symbol as parameter.
+	const int referenceParamInstructionCount = 8;
+	extern const std::array< game::Instruction, referenceParamInstructionCount > referenceParamInstructions;
+
+	//an instruction with type and param
 	struct StackInstruction
 	{
 		StackInstruction() {};
 		StackInstruction(Instruction _instr) : instruction(_instr), hasParam(false) {};
-		StackInstruction(Instruction _instr, int _param) : instruction(_instr), hasParam(true), param(_param){};
+		StackInstruction(Instruction _instr, Symbol::VirtualId _param) : instruction(_instr), hasParam(true), param(_param){};
 
 		inline void set(Instruction _instr) { instruction = _instr; hasParam = false; };
-		inline void set(Instruction _instr, int _param) { instruction = _instr; hasParam = true; param = _param; };
+		inline void set(Instruction _instr, Symbol::VirtualId _param) { instruction = _instr; hasParam = true; param = _param; };
 
 		Instruction instruction;
-		//actually dependend on the instruction type
+		//actually dependend on the instruction type, but set depending on whether a param was provided
 		bool hasParam;
-		int param;
+		//most instructions take a symbol id, some a const int
+		Symbol::VirtualId param;
 	};
 
+	/* ByteCodeStack ******************************o
+	 * A std::vector wrapper that counts the stack size.
+	 */
 	class ByteCodeStack : public std::vector < StackInstruction >
 	{
 	public:
@@ -124,11 +133,18 @@ namespace game{
 		{
 			type = 5;
 			flags = _flags;
-			returnType = _retType;
-			id = _sym.id;
-			setById(id, *this);
 		}
 
+		//adds the prefix name"." to all params and locals
+		void finalizeNames()
+		{
+			//add namespace specific prefix
+			for (int c = 0; c < (int)params.size(); ++c)
+				params[c].name = name + '.' + params[c].name;
+
+			for (int c = 0; c < (int)locals.size(); ++c)
+				locals[c].name = name + '.' + locals[c].name;
+		}
 
 		unsigned int returnType; // type index; is translated by the compiler
 
@@ -235,9 +251,7 @@ namespace game{
 		ConstSymbol_String()
 			: ConstSymbol("")
 		{
-			//the name is generated using the id and adding a 0xFF to the front
-			//this seems to be the way the original parser is doing it
-			name = char(0xFF) + std::to_string(id);
+			//name is not set here because the id is not final
 		}
 
 
@@ -269,5 +283,5 @@ namespace game{
 	typedef Symbol_Dummy < int, 8 > DummyInt;
 	typedef Symbol_Dummy < float, 9 > DummyFloat;
 	typedef Symbol_Dummy < int, 10 > DummyOperator;
-	typedef Symbol_Dummy < int, 11 > DummyInstance;
+	typedef Symbol_Dummy < Symbol*, 11 > DummyInstance;
 }

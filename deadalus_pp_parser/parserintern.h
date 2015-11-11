@@ -97,11 +97,13 @@ namespace par{
 	class ArraySymbol : public game::Symbol
 	{
 	public:
-		ArraySymbol(const game::Symbol& _sym, size_t _index):
+		ArraySymbol(game::Symbol& _sym, size_t _index):
 			game::Symbol(_sym),
-			index(_index)
+			index(_index),
+			symbol(&_sym)
 		{}
 
+		game::Symbol* symbol;
 		size_t index;
 	};
 

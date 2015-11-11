@@ -37,19 +37,31 @@ namespace game{
 	//inherit for more complex structures
 	struct Symbol : public Symbol_Core
 	{
+		//a structure that can hold a symbol identifier or a instruction param.
+		//In parsing state references are hold as unique identifier
+		//while in compiling state int id are used(like in gothic).
+		struct VirtualId
+		{
+			VirtualId() = default;
+			VirtualId(int _i) { id = _i; };
+			VirtualId(Symbol* _ptr){ ptr = _ptr; };
+			union
+			{
+				//-- instruction params
+				int constNum; //const numerical
+				int sadr; //stack adr
+				//-- references
+				int id; //id of a symbol
+				Symbol* ptr; //pointer to a symbol
+			};
+		};
 		/**
 		 * Creates a symbol with minimal params.
 		 * @param _isTemp When true the symbol does not get a unique id
 		 */
-		Symbol(bool _isTemp, const std::string& _name) : name(_name), flags(0), parent(0xFFFFFFFF),
+		Symbol(bool _isTemp, const std::string& _name) : name(_name), flags(0), parent((int)0xFFFFFFFF),
 			Symbol_Core(0)
 		{
-			if (!_isTemp)
-			{
-				id = idCount++;
-
-				allSymbols().emplace_back(this);
-			}
 		};
 
 		/**
@@ -63,9 +75,6 @@ namespace game{
 			flags(_flags),
 			parent(_parent)
 		{
-			id = idCount++;
-
-			allSymbols().push_back(this);
 		};
 
 		//move constructor that handles id managment
@@ -77,9 +86,9 @@ namespace game{
 			parent(_other.parent),
 			id(_other.id)
 		{
-			setById(_other.id, *this);
 		}
 
+		//move assignment
 		Symbol& operator=(Symbol&& _other)
 		{
 			type = _other.type;
@@ -89,15 +98,13 @@ namespace game{
 			parent = _other.parent;
 			id = _other.id;
 
-			setById(id, *this);
-
 			return *this;
 		}
 
 		std::string name;
 
 		int id;
-		int parent;
+		VirtualId parent;
 
 		//all part of one dword-bitfield
 
@@ -135,18 +142,7 @@ namespace game{
 				for (size_t i = 0; i < size; ++i) _stream.write((char*)&defaultContentStr, type == 3 ? 1 : 4);
 
 		};
-
-		static Symbol& getById(size_t _id) { return *allSymbols()[_id]; };
-		static void setById(size_t _id, Symbol& sym) { allSymbols()[_id] = &sym; };
-
-		static int idCount; //initialized in "symbol.cpp"
-
 	private:
-		static std::vector < Symbol* >& allSymbols()
-		{
-			static std::vector < Symbol* > allSym;
-			return allSym;
-		}
 	};
 
 

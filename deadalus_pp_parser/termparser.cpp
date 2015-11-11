@@ -56,9 +56,10 @@ namespace par{
 			}
 			else if (*token == TokenType::ConstStr)
 			{
-				m_gameData.m_internStrings.emplace_back();
-				m_gameData.m_internStrings.back().value.emplace_back(m_lexer->getWord(*token));
-				outputQue.push_back(&m_gameData.m_internStrings.back());
+				game::ConstSymbol_String* constStr = new game::ConstSymbol_String();
+				m_gameData.m_internStrings.emplace_back(constStr);
+				constStr->value.emplace_back(m_lexer->getWord(*token));
+				outputQue.push_back(constStr);
 			}
 			else if (*token == TokenType::Symbol)
 			{
@@ -137,7 +138,7 @@ namespace par{
 							outputQue.pop_back();
 
 							//exchange it for a dummy
-							game::Symbol_Core* sym = new DummyInstance(instance.id);
+							game::Symbol_Core* sym = new DummyInstance(&instance);
 							dummySymbols.emplace_back(sym);
 							outputQue.push_back(sym);
 
@@ -297,7 +298,7 @@ namespace par{
 				//	pushParamInstr(*paramStack, _function->byteCode);
 					paramStack++;
 				}
-				op.stackInstruction.emplace_back(func.testFlag(game::Flag::External) ? game::callExtern : game::call, func.id);
+				op.stackInstruction.emplace_back(func.testFlag(game::Flag::External) ? game::callExtern : game::call, &func);
 
 				outputQue.erase(firstParam, it);
 				//(*it)->type = func.returnType;
@@ -415,9 +416,9 @@ namespace par{
 		// class member
 		else if (_sym->type == 11)
 		{
-			int instanceId = ((game::DummyInt*)_sym)->value;
-			_instrStack.emplace_back(game::Instruction::setInst, instanceId);
-			m_thisInst = instanceId;
+			game::Symbol* instancePtr = ((game::DummyInstance*)_sym)->value;
+			_instrStack.emplace_back(game::Instruction::setInst, instancePtr);
+			m_thisInst = instancePtr;
 			return 0;
 		}
 
@@ -428,7 +429,7 @@ namespace par{
 		{
 			if (sym.size > 1)
 			{
-				_instrStack.emplace_back(game::Instruction::pushArray, ((game::Symbol*)_sym)->id);
+				_instrStack.emplace_back(game::Instruction::pushArray, ((par::ArraySymbol*)_sym)->symbol);
 				_instrStack.emplace_back((game::Instruction)((par::ArraySymbol*)_sym)->index);
 
 				return 0;
@@ -438,22 +439,22 @@ namespace par{
 		switch (_sym->type)
 		{
 		case 2:
-			_instrStack.emplace_back(game::Instruction::pushVar, ((game::Symbol*)_sym)->id);
+			_instrStack.emplace_back(game::Instruction::pushVar, ((game::Symbol*)_sym));
 			break;
 
 		case 3:
-			_instrStack.emplace_back(game::Instruction::pushVar, ((game::Symbol*)_sym)->id);
+			_instrStack.emplace_back(game::Instruction::pushVar, ((game::Symbol*)_sym));
 			break;
 
 		case 5: _instrStack.emplace_back(((game::Symbol*)_sym)->testFlag(game::Const) ? game::Instruction::pushInt : game::pushVar,
-			((game::Symbol*)_sym)->id);
+			((game::Symbol*)_sym));
 			break;
 
 		case 7:
-			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym)->id);
+			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym));
 			break;
 		default: 
-			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym)->id);
+			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym));
 			//return -1;
 		}
 
@@ -545,7 +546,7 @@ namespace par{
 		SEMIKOLON;
 
 		//reset the thisInst
-		m_thisInst = -1;
+		m_thisInst = nullptr;
 
 		return 0;
 	}
@@ -593,7 +594,7 @@ namespace par{
 		//the last codeblock does not need a jump to reach the end
 		_functionSymbol.byteCode.pop_back();
 		//last block was "if else" and has its end jump point wrong
-		if (condJmp != 0xFFFFFFFF)_functionSymbol.byteCode[condJmp].param -= 5; 
+		if (condJmp != 0xFFFFFFFF)_functionSymbol.byteCode[condJmp].param.sadr -= 5; 
 
 		//set the endJumps
 		size_t nextInstruction = _functionSymbol.byteCode.getStackSize();
@@ -655,7 +656,7 @@ namespace par{
 				pushInstr = game::Instruction::pushInst;
 			}
 
-			_func.byteCode.emplace_back(pushInstr, _func.params[i].id);
+			_func.byteCode.emplace_back(pushInstr, &_func.params[i]);
 			_func.byteCode.emplace_back(assignInstr);
 		}
 	}

@@ -24,13 +24,16 @@ namespace par {
 class Parser
 {
 public:
-	Parser(const std::string& _configFile);
-	~Parser();
-
-	/* parseSource() ************************************
-	 * parses a .src file with any files named within
+	/*
+	 * Creates a parser with the settings from the _configFile.
 	 */
-	void parseSource(const std::string& _fileName);
+	Parser(const std::string& _configFile);
+
+	/* parse() ************************************
+	* Takes a .src file and parses all the files named within,
+	* building the GameData.
+	*/
+	void parse(const std::string& _fileName);
 
 	/* parseFile() ************************************
 	* Parses a token stream hold by the given lexer
@@ -48,6 +51,12 @@ public:
 	void compile() { m_compiler.compile("test.dat", m_config.m_saveInOrder); };
 
 private:
+	/* parseSource() ************************************
+	* parses a .src file with any files named within
+	* and adds any matches to _names.
+	*/
+	void parseSource(const std::string& _fileName, std::vector< std::string >& _names );
+
 	/* preCompilerDirective() *****************************
 	 * Parses a pre directive and sets the required switches to process it
 	 */
@@ -147,7 +156,8 @@ private:
 	game::Symbol_Type* m_currentNamespace;
 	utils::SymbolTable < UndeclaredSymbol > m_undeclaredSymbols;
 	std::vector< CodeToParse >* m_codeQue;
-	int m_thisInst; //< instance id that occupies the this-pointer in the current code
+	game::Symbol* m_thisInst; //< instance symbol that occupies the this-pointer in the current code
+	//it should always be used with parent.ptr
 	//resolved content
 	game::GameData m_gameData;
 };

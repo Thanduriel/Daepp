@@ -61,6 +61,27 @@ public:
 		m_elem.erase(m_elem.begin() + _i);
 	}
 
+	/* insert() ************************************************
+	 * Moves another symboltable's content into this one after _begin.
+	 * _source is empty afterwards and this symbolTable will switch to slowMode.
+	 */
+	template < typename _Container >
+	void insert(typename std::deque< std::unique_ptr< _T > >::iterator _begin, _Container& _source)
+	{
+		m_elem.insert(_begin + 1, std::make_move_iterator(_source.begin()), std::make_move_iterator(_source.end()));
+		slowMode = true;
+	}
+
+	template < typename _Container >
+	void insert(_Container& _source)
+	{
+		m_elem.insert(m_elem.end(), std::make_move_iterator(_source.begin()), std::make_move_iterator(_source.end()));
+		slowMode = true;
+	}
+
+	typename std::deque< std::unique_ptr< _T > >::iterator begin() { return m_elem.begin(); };
+	typename std::deque< std::unique_ptr< _T > >::iterator end() { return m_elem.end(); };
+
 	/* find() ***********************
 	 * @param _name name of the element
 	 * @return index of the element
@@ -68,8 +89,16 @@ public:
 	 */
 	int find(const std::string& _name)
 	{
-		for (int i = 0; i < m_elem.size(); ++i)
-			if (m_names[i] == _name) return i;
+		if (!slowMode)
+		{
+			for (int i = 0; i < m_elem.size(); ++i)
+				if (m_names[i] == _name) return i;
+		}
+		else
+		{
+			for (int i = 0; i < (int)m_elem.size(); ++i)
+				if (m_elem[i]->name == _name) return i;
+		}
 
 		return -1;
 	};
@@ -97,6 +126,7 @@ public:
 		return m_elem.size();
 	}
 
+	// specific element access
 	_T& back()
 	{
 		return *m_elem.back();
@@ -104,6 +134,8 @@ public:
 private:
 	std::deque< std::unique_ptr< _T > > m_elem;
 	std::vector < std::string > m_names; //todo test vs no extra string table
+
+	bool slowMode; // lookup in m_names is invalid
 };
 
 }//end namespace
