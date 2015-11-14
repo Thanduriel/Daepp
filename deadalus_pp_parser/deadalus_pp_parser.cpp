@@ -37,7 +37,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	clock_t end = clock();
 
-	printf(("Compiling took: " + std::to_string(double(end - begin) / CLOCKS_PER_SEC) + "sec").c_str());
+	printf(("The whole proccess took: " + std::to_string(double(end - begin) / CLOCKS_PER_SEC) + "sec").c_str());
 
 	//dont close automatically
 	printf("\nPress a key to continue...");

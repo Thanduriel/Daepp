@@ -14,8 +14,11 @@ namespace par {
 	};
 
 /* Parser *******************************
- * The main part of the pipline
- * analyzes the content
+ * The main part of the pipline.
+ * Parses all structures and translates them in a format to be used for further parsing.
+ * All structures of gameData are filled and 
+ * m_constSymbols, m_types, m_prototypes are only used for ease of access
+ * while the others contain all vital information.
  * error codes:
  * -1 parsing error
  * 0 success

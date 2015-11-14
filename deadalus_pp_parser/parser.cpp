@@ -54,6 +54,8 @@ Parser::Parser(const std::string& _configFile)
 
 void Parser::parse(const std::string& _fileName)
 {
+	//reserve some memory to reduce reallocations
+	m_gameData.m_symbols.reserve(4096);
 	std::vector< string > names;
 
 	parseSource(_fileName, names);
@@ -61,18 +63,17 @@ void Parser::parse(const std::string& _fileName)
 	LOG(INFO) << "Starting tokenizing.";
 	clock_t begin = clock();
 
-	//threads
-	std::vector < std::thread > lexerThreads;
-	std::vector < std::unique_ptr < Lexer > > lexers;
+	vector < unique_ptr < Lexer > > lexers;
 	vector < vector< CodeToParse > > definitionsToParse; //one set of definitions to parse per lexer
+	
 	//now parse all retrieved names
-	for (auto& name : names)
+	for (int i = 0; i < names.size(); ++i)
 	{
-		lexers.emplace_back(new Lexer(name));//store file name to be able to display it in error messages
-		lexerThreads.emplace_back(&Parser::tokenizeFile, m_config.m_sourceDir + name, lexers.back().get());
+		lexers.emplace_back(new Lexer(names[i]));//store file name to be able to display it in error messages
+		tokenizeFile(m_config.m_sourceDir + names[i], lexers.back().get());
 	}
 	//make shure that all lexers have finished
-	for (auto& lexerThread : lexerThreads) lexerThread.join();
+	//for (auto& lexerThread : lexerThreads) lexerThread.join();
 	clock_t end = clock();
 	LOG(INFO) << "Finished tokenizing in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
 
@@ -87,40 +88,15 @@ void Parser::parse(const std::string& _fileName)
 
 	//finally parse function definitions
 	LOG(INFO) << "Parsing function definitions.";
+
 	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
 	{
 		m_lexer = lexers[i].get();
 		for (auto& codeToParse : definitionsToParse[i])
 			parseCodeBlock(codeToParse);
 	}
-	
-	//add members to the main table to get them compiled
-	for (auto i = g_atomTypeCount; i < m_gameData.m_types.size(); ++i)
-	{
-		//add namespace prefix
-		for (int c = 0; c < (int)m_gameData.m_types[i].elem.size(); ++c)
-			m_gameData.m_types[i].elem[c].name = m_gameData.m_types[i].name + '.' + m_gameData.m_types[i].elem[c].name;
 
-		int index = m_gameData.m_symbols.find(m_gameData.m_types[i].name);
-		m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, m_gameData.m_types[i].elem);
-	}
-
-	//add the local vars, params 
-	//after all functions have been parsed because it is not possible to find them
-/*	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
-	{
-		for (auto& codeToParse : definitionsToParse[i])
-		{
-			Symbol_Function& function = codeToParse.m_function;
-
-			//add namespace prefix
-			function.finalizeNames();
-
-			int index = m_gameData.m_symbols.find(codeToParse.m_function.name);
-			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, codeToParse.m_function.params);
-			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index + codeToParse.m_function.params.size(), codeToParse.m_function.locals);
-		}
-	}*/
+	LOG(INFO) << "Finished parsing.";
 }
 
 // ***************************************************** //

@@ -16,7 +16,11 @@ namespace par{
 
 	int Compiler::compile(const std::string& _outputFile, bool _saveInOrder)
 	{
+		LOG(INFO) << "Starting compiling.";
+		clock_t begin = clock();
+
 		//move every symbol into m_symbols
+		exportClassMembers();
 		exportFunctionMembers();
 		addConstStrings();
 
@@ -55,11 +59,11 @@ namespace par{
 			{
 				game::Symbol* symbol = &m_gameData.m_symbols[i];
 
-				if (dynamic_cast<game::Symbol_Type*> (symbol))
+				if (dynamic_cast<game::Symbol_Type*>(symbol)) //type == 4 dynamic_cast<game::Symbol_Type*> 
 				{
 					compileClass(*(game::Symbol_Type*)symbol);
 				}
-				else if (dynamic_cast<game::Symbol_Function*> (symbol))
+				else if (dynamic_cast<game::Symbol_Function*>(symbol)) // 5, 6, >=7 dynamic_cast<game::Symbol_Function*> 
 				{
 					compileFunction(*(game::Symbol_Function*)symbol);
 					m_functions.push_back((game::Symbol_Function*)symbol);
@@ -77,6 +81,8 @@ namespace par{
 
 		fileStream.close();
 
+		clock_t end = clock();
+		LOG(INFO) << "Finished compiling in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
 		return 0;
 	}
 
@@ -129,6 +135,22 @@ namespace par{
 			int index = m_gameData.m_symbols.find(function.name);
 			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, function.params);
 			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index + function.params.size(), function.locals);
+		}
+	}
+
+	// ************************************************************* //
+
+	void Compiler::exportClassMembers()
+	{
+		//add members to the main table to get them compiled
+		for (auto i = g_atomTypeCount; i < m_gameData.m_types.size(); ++i)
+		{
+			//add namespace prefix
+			for (int c = 0; c < (int)m_gameData.m_types[i].elem.size(); ++c)
+				m_gameData.m_types[i].elem[c].name = m_gameData.m_types[i].name + '.' + m_gameData.m_types[i].elem[c].name;
+
+			int index = m_gameData.m_symbols.find(m_gameData.m_types[i].name);
+			m_gameData.m_symbols.insert(m_gameData.m_symbols.begin() + index, m_gameData.m_types[i].elem);
 		}
 	}
 

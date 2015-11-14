@@ -101,6 +101,9 @@ namespace game{
 			return *this;
 		}
 
+		// sets the id of this symbol and returns how many ids where used for itself and its members
+		virtual int setId(int _id) { id = _id; return 1; }
+
 		std::string name;
 
 		int id;

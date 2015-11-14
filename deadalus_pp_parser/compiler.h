@@ -5,7 +5,13 @@
 namespace par{
 
 	/* Compiler *****************************
-	 * compiles gameData into bytecode
+	 * Takes a gamaData structure produced by a Parser
+	 * It first moves all vital data into m_symbols
+	 * making many fast access routes invalid
+	 * and fixes specific syntactic rules of the gothic compiled stuff.
+	 * Then all symbols are written into a file,
+	 * while the stack is build in the right order and including every
+	 * intern function(functions, prototypes, instances).
 	 */
 
 	class Compiler
@@ -32,6 +38,9 @@ namespace par{
 
 		//move params and locals
 		void exportFunctionMembers();
+
+		//move members
+		void exportClassMembers();
 		
 		//writes a single given symbol to the stream
 		int compileSymbol( game::Symbol& _sym);

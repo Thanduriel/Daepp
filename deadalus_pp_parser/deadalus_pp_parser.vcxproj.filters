@@ -57,9 +57,6 @@
     <ClInclude Include="parserconfig.h">
       <Filter>parser</Filter>
     </ClInclude>
-    <ClInclude Include="codeparser.h">
-      <Filter>parser</Filter>
-    </ClInclude>
     <ClInclude Include="utils.h">
       <Filter>utils</Filter>
     </ClInclude>
@@ -106,9 +103,6 @@
     </ClCompile>
     <ClCompile Include="utils.cpp">
       <Filter>utils</Filter>
-    </ClCompile>
-    <ClCompile Include="codeparser.cpp">
-      <Filter>parser</Filter>
     </ClCompile>
     <ClCompile Include="symbol.cpp">
       <Filter>game</Filter>

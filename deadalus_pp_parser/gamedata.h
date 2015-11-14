@@ -9,6 +9,11 @@
 
 namespace game{
 
+	/* GameData
+	 * A structure that can hold any symbol declarations
+	 * and provides space for faster lookup wihle parsing.
+	 * See compiler.h or parser.h for specific format usage.
+	 */
 	struct GameData
 	{
 		GameData(std::initializer_list< game::Symbol_Type* >& _init) : m_types(_init)

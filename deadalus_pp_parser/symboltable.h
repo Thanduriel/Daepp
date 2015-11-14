@@ -55,6 +55,12 @@ public:
 		return true;
 	};
 
+	void reserve(size_t _size)
+	{
+		m_elem.reserve(_size);
+		m_names.reserve(_size);
+	}
+
 
 	void erase(size_t _i)
 	{
@@ -66,12 +72,13 @@ public:
 	 * _source is empty afterwards and this symbolTable will switch to slowMode.
 	 */
 	template < typename _Container >
-	void insert(typename std::deque< std::unique_ptr< _T > >::iterator _begin, _Container& _source)
+	void insert(typename std::vector< std::unique_ptr< _T > >::iterator _begin, _Container& _source)
 	{
 		m_elem.insert(_begin + 1, std::make_move_iterator(_source.begin()), std::make_move_iterator(_source.end()));
 		slowMode = true;
 	}
 
+	//insert a complete container
 	template < typename _Container >
 	void insert(_Container& _source)
 	{
@@ -79,8 +86,8 @@ public:
 		slowMode = true;
 	}
 
-	typename std::deque< std::unique_ptr< _T > >::iterator begin() { return m_elem.begin(); };
-	typename std::deque< std::unique_ptr< _T > >::iterator end() { return m_elem.end(); };
+	typename std::vector< std::unique_ptr< _T > >::iterator begin() { return m_elem.begin(); };
+	typename std::vector< std::unique_ptr< _T > >::iterator end() { return m_elem.end(); };
 
 	/* find() ***********************
 	 * @param _name name of the element
@@ -132,7 +139,7 @@ public:
 		return *m_elem.back();
 	}
 private:
-	std::deque< std::unique_ptr< _T > > m_elem;
+	std::vector< std::unique_ptr< _T > > m_elem;
 	std::vector < std::string > m_names; //todo test vs no extra string table
 
 	bool slowMode; // lookup in m_names is invalid
