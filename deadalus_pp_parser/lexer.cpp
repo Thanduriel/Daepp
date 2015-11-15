@@ -1,6 +1,9 @@
 #include "lexer.h"
 #include "easylogging++.h"
 
+//test
+#include "stats.h"
+
 namespace par{
 /* token operators*/
 
@@ -220,6 +223,10 @@ void Lexer::analyse(std::string&& _text)
 	}
 
 	m_iterator = m_tokens.begin();
+
+	//test
+//	static utils::StatCalculator< unsigned int > stats(100);
+//	stats.inc((unsigned int)m_tokens.size());
 }
 
 // ********************************************* //
@@ -266,7 +273,7 @@ bool Lexer::compare(const Token& _token, const std::string& _str)
 // ********************************************* //
 
 //additional characters that are valid in symbol names
-const std::string validChars = "_^@üöäÜÄÖ";
+const std::string validChars = "_^@üöäÜÄÖß";
 
 bool Lexer::isValidChar(char _c)
 {

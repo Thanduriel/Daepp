@@ -9,7 +9,7 @@ using namespace std;
 namespace par{
 
 
-	int Parser::Term(game::Symbol_Core* _ret, game::Symbol_Function* _function)
+	int Parser::Term(game::Symbol_Core* _ret, game::Symbol_Function* _function, TokenType _endChar)
 	{
 		game::ByteCodeStack* instrStack = _function ? &_function->byteCode : nullptr;
 
@@ -36,7 +36,7 @@ namespace par{
 
 		while (token = m_lexer->nextToken())
 		{
-			if (*token == TokenType::End || *token == TokenType::CurlyBracketLeft || *token == TokenType::SquareBracketRight) //if statments are closed by a begining codeblock
+			if (*token == _endChar)
 			{
 				m_lexer->prev();
 				break;
@@ -58,7 +58,7 @@ namespace par{
 			{
 				game::ConstSymbol_String* constStr = new game::ConstSymbol_String();
 				m_gameData.m_internStrings.emplace_back(constStr);
-				constStr->value.emplace_back(m_lexer->getWord(*token));
+				constStr->value[0] = m_lexer->getWord(*token);
 				outputQue.push_back(constStr);
 			}
 			else if (*token == TokenType::Symbol)
@@ -236,7 +236,7 @@ namespace par{
 
 				game::DummyInt result(0);
 
-				if (Term(&result)) PARSINGERROR("Term does not resolve to an int.", token);
+				if (Term(&result, TokenType::SquareBracketRight)) PARSINGERROR("Term does not resolve to an int.", token);
 
 				TOKEN(SquareBracketRight);
 
@@ -568,7 +568,7 @@ namespace par{
 			{
 				m_lexer->nextToken();
 
-				Term(nullptr, &_functionSymbol);
+				Term(nullptr, &_functionSymbol, TokenType::CurlyBracketLeft);
 
 				_functionSymbol.byteCode.emplace_back(game::Instruction::jmpf, 0);
 				condJmp = _functionSymbol.byteCode.size() - 1;

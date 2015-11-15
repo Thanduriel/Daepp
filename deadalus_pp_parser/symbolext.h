@@ -218,6 +218,7 @@ namespace game{
 		ConstSymbol(const std::string& _name, size_t _size = 1)
 			: Symbol(_name, _type, Const, _size)//(1 << 16)
 		{
+			value = new _T[_size];
 		};
 
 		ConstSymbol(const std::string& _name, std::initializer_list< _T >  _val)
@@ -226,18 +227,21 @@ namespace game{
 		{
 		};
 
-		std::vector< _T > value;
+		~ConstSymbol() { delete[] value; };
+
+		_T* value;
+		size_t size;
 
 		void saveContent(std::ofstream& _stream) override
 		{
-			_stream.write((char*)&value[0], sizeof(_T) * value.size());
-			//	for (auto& val : value)
-			//		_stream << val;
+			//sizeof(_T) would not be correct as all atom types in gothic have a size of 4
+			_stream.write((char*)&value[0], 4 * size); 
 		};
 	};
 
 	typedef game::ConstSymbol<int, 2> ConstSymbol_Int;
 	typedef game::ConstSymbol<float, 1> ConstSymbol_Float;
+	typedef game::ConstSymbol< Symbol::VirtualId, 5 > ConstSymbol_Func;
 
 	//symbol for const strings
 	struct ConstSymbol_String : public ConstSymbol < std::string, 3 >
@@ -257,11 +261,11 @@ namespace game{
 
 		void saveContent(std::ofstream& _stream) override
 		{
-			for (std::string& str : value)
+			for (int i = 0; i < (int)size; ++i)
 			{
 				//add string termination
-				str += char(0x0A);
-				_stream.write((char*)&str[0], str.size());
+				value[i] += char(0x0A);
+				_stream.write((char*)&value[i][0], value[i].size());
 			}
 		};
 	};

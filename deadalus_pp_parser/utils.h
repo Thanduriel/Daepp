@@ -33,7 +33,7 @@ namespace utils
 	template< class _Container >
 	void wildcardMatch(const std::string& _str, _Container& _container, size_t _begin, size_t _end = 0)
 	{
-		if (_end == 0) _end = _container.size() - 1;
+		if (_end == 0) _end = _container.size();
 		//match the filename with every file in the range
 		for (int i = (int)_begin; i < (int)_end; ++i)
 		{
@@ -54,7 +54,7 @@ namespace utils
 						//'*' is never at the end since there are only two types of significant endings that should never overlap
 						j++;
 						//todo find all possible points to continiue so that this works: a*b -> abab
-						bool fits = false;
+						fits = false;
 						for (; j + offset < _container[i].size(); ++offset)
 							//found where the '*' ends
 							if ((_container[i][j + offset]) == _str[j])
@@ -62,6 +62,9 @@ namespace utils
 							fits = true;
 							break;
 							}
+
+						//no match after '*' was found
+						if (!fits) break;
 					}
 					else
 					{
@@ -70,12 +73,14 @@ namespace utils
 						if (_str[j] != _container[i][j + offset])
 						{
 							fits = false;
+							break; //one mismatch is enough
 						}
 					}
 				}
 				//char by char comparisation iterates only throught _str; _container[x] could be even longer
 				//after the '*' loop offset is already larger then the index
 				if (j + offset != _container[i].size()) fits = false;
+
 			}
 			//mark string instead of removing him to prevent movement in the container
 			if (!fits) _container[i] = "";

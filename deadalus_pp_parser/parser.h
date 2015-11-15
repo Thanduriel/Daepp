@@ -70,7 +70,8 @@ private:
 	* can hold any int or float
 	* @return parsing error code
 	*/
-	int Term(game::Symbol_Core* _ret = nullptr, game::Symbol_Function* _function = nullptr);
+	int Term(game::Symbol_Core* _ret = nullptr, game::Symbol_Function* _function = nullptr, TokenType _endChar = TokenType::End);
+	int Term(game::Symbol_Core* _ret = nullptr, TokenType _endChar = TokenType::End) { return Term(_ret, nullptr, _endChar); };
 
 	int pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
 

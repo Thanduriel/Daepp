@@ -302,6 +302,7 @@
     <ClInclude Include="parserintern.h" />
     <ClInclude Include="refcontainer.h" />
     <ClInclude Include="reservedsymbols.h" />
+    <ClInclude Include="stats.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="symbol.h" />
     <ClInclude Include="symbolext.h" />

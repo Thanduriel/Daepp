@@ -20,7 +20,7 @@ compiler config
 
 ## feature set
 * parse known symbol types (var, function, class, prototype, instance)
-* parse code (of functions) // currently inactive
+* parse code (of functions)
 * compile everything to a valid .dat
 
 3rd party stuff used:

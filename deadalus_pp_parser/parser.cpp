@@ -402,22 +402,26 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		//const arrays start with '{'
 		if (arraySize > 1) TOKEN(CurlyBracketLeft);
 
+		TokenType endChar = arraySize > 1 ? TokenType::CurlyBracketRight : TokenType::End;
 		game::Symbol* symbol;
 		//type decides how to parse
 		if (index == 2)
 		{
 			ConstSymbol_Int* constSymbol = new game::ConstSymbol_Int(word, arraySize);
 			symbol = constSymbol;
-			constSymbol->value.resize(arraySize);
 
-			for (int i = 0; i < arraySize; ++i)
+			for (int i = 0; i < arraySize - 1; ++i)
 			{
 				game::DummyInt result(0);
-				if (Term(&result)) return -1;
+				if (Term(&result, TokenType::Comma)) return -1;
 				constSymbol->value[i] = result.value;
 
-				if (i < arraySize - 1) TOKEN(Comma);
+				TOKEN(Comma)
 			}
+
+			game::DummyInt result(0);
+			if (Term(&result, endChar)) return -1;
+			constSymbol->value[arraySize - 1] = result.value;
 
 			m_gameData.m_constSymbols.push_back(*symbol);
 		}
@@ -425,16 +429,19 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		{
 			ConstSymbol_Float* constSymbol = new game::ConstSymbol_Float(word, arraySize);
 			symbol = constSymbol;
-			constSymbol->value.resize(arraySize);
 
-			for (int i = 0; i < arraySize; ++i)
+			for (int i = 0; i < arraySize - 1; ++i)
 			{
 				game::DummyFloat result(0);
-				if (Term(&result)) return -1;
+				if (Term(&result, TokenType::Comma)) return -1;
 				constSymbol->value[i] = result.value;
 
-				if (i < arraySize - 1) TOKEN(Comma);
+				TOKEN(Comma)
 			}
+
+			game::DummyFloat result(0);
+			if (Term(&result, endChar)) return -1;
+			constSymbol->value[arraySize-1] = result.value;
 
 			m_gameData.m_constSymbols.push_back(*symbol);
 		}
@@ -442,7 +449,6 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		{
 			ConstSymbol_String* constSymbol = new game::ConstSymbol_String(word, arraySize);
 			symbol = constSymbol;
-			constSymbol->value.resize(arraySize);
 
 			for (int i = 0; i < arraySize; ++i)
 			{
@@ -451,7 +457,20 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 				if (i < arraySize - 1) TOKEN(Comma);
 			}
 		}
-		else PARSINGERROR("Only int, float and string can be const.", typeToken);
+		else if (index == 5)
+		{
+			ConstSymbol_Func* constSymbol = new game::ConstSymbol_Func(word);
+			symbol = constSymbol;
+
+			TOKENEXT(TokenType::Symbol, functionSymbol);
+			int symInd = m_gameData.m_symbols.find(m_lexer->getWord(*functionSymbol));
+
+
+			constSymbol->value[0].ptr = &m_gameData.m_symbols[symInd];
+
+			m_gameData.m_constVarFuncs.push_back(*constSymbol);
+		}
+		else PARSINGERROR("Only int, float, string and func can be const.", typeToken);
 
 		if (arraySize > 1) TOKEN(CurlyBracketRight);
 

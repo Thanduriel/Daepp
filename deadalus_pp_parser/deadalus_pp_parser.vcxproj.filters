@@ -78,6 +78,9 @@
     <ClInclude Include="basictypes.h">
       <Filter>game</Filter>
     </ClInclude>
+    <ClInclude Include="stats.h">
+      <Filter>utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

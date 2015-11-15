@@ -104,6 +104,10 @@ namespace par{
 				m_gameData.m_symbols[i].parent.id = m_gameData.m_symbols[i].parent.ptr->id;
 		}
 
+		//update content of const var funcs
+		for (int i = 0; i < (int)m_gameData.m_constVarFuncs.size(); ++i) 
+			m_gameData.m_constVarFuncs[i].value[0].id = m_gameData.m_constVarFuncs[i].value[0].ptr->id;
+
 		//update of the relevant instructions happens in compileFunction
 	}
 

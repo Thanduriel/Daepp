@@ -38,6 +38,9 @@ namespace game{
 		//functions (only real functions) to fix params and locals
 		utils::ReferenceContainer < game::Symbol_Function > m_functions;
 
+		//function variables -> need an id update
+		utils::ReferenceContainer < game::ConstSymbol_Func > m_constVarFuncs;
+
 		//Const strings are not part of m_symbols since their names are generated and thus not an identifier
 		//and no searching for them takes place.
 		//However their references need to remain valid.
