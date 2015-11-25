@@ -22,7 +22,7 @@
 #define TOKENOPT(type) (((tokenOpt = m_lexer->nextToken()) && *tokenOpt == type))
 
 //the standard check for ';' that takes into account the setting "alwaysSemikolon"
-#define SEMIKOLON if (!TOKENOPT(End)){if (m_config.m_alwaysSemikolon){PARSINGERROR("Expression end';' expected.", tokenOpt);}else m_lexer->prev();}
+#define SEMIKOLON if (!TOKENOPT(End)){if (m_config.m_alwaysSemicolon){PARSINGERROR("Expression end';' expected.", tokenOpt);}else m_lexer->prev();}
 
 /* Array *************
  * A simple and light dynamic buffer with size = capacity

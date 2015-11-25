@@ -8,7 +8,7 @@ namespace par{
 		//config
 		std::string m_sourceDir;
 		bool m_caseSensitive;
-		bool m_alwaysSemikolon;
+		bool m_alwaysSemicolon;
 		bool m_saveInOrder;
 		bool m_showCodeSegmentOnError;
 	};

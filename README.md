@@ -6,7 +6,11 @@ See 'feature set' for more specific information.
 
 ## configuration
 Inside the config.json you find a selection of parameters to configure the parser and language features.
-Here you find explanations and recommandations aswell as the *default value* for the normal gothic parser.
+Here you find explanations and recommendations as well as the *default value* for the normal gothic parser.
+Settings of the section "language config" can be switched inside a .src file using a statement like this:
+```
+# caseSensitive true
+```
 * sourceDir is where your gothic.src is found
 * outputDir the folder where the .dat is placed, using the same name as the provided .src
 

@@ -45,7 +45,7 @@ Parser::Parser(const std::string& _configFile)
 	m_config.m_sourceDir += '\\';
 
 	m_config.m_caseSensitive = config[string("caseSensitive")];
-	m_config.m_alwaysSemikolon = config[string("alwaysSemicolon")];
+	m_config.m_alwaysSemicolon = config[string("alwaysSemicolon")];
 	m_config.m_saveInOrder = config[string("saveInOrder")];
 	m_config.m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
 }
@@ -734,7 +734,7 @@ void Parser::declareClass()
 
 	if (token->type != End)
 	{
-		if (m_config.m_alwaysSemikolon)
+		if (m_config.m_alwaysSemicolon)
 		{
 			PARSINGERROR("End';' expected.", token);
 		}
@@ -750,10 +750,38 @@ void Parser::declareClass()
 
 void Parser::preDirective(const std::string& _directive)
 {
-	if (_directive == "#INORDER")
-		m_parseInOrder = true;
-	else if (_directive == "#NOTINORDER")
-		m_parseInOrder = false;
+	//init to not throw if an invalid statement occurs
+	int begin = 0;
+	int end = 0;
+	bool searchBeg = true;
+	for (int i = 1; i < (int)_directive.size(); ++i)
+	{
+		if (searchBeg)
+		{
+			if (_directive[i] != ' ')
+			{
+				begin = i;
+				searchBeg = false;
+			}
+		}
+		else
+		{
+			if (_directive[i] == ' ')
+			{
+				end = i;
+				break;
+			}
+		}
+	}
+
+	string sett = _directive.substr(begin, end - begin);
+
+	bool newVal;
+	for (int i = end + 1; i < (int)_directive.size(); ++i)
+		if (_directive[i] != ' ') newVal = _directive[i] == 't';
+	
+	if (sett == "caseSensitive") m_config.m_caseSensitive = newVal;
+	else if (sett == "alwaysSemicolon") m_config.m_alwaysSemicolon = newVal;
 }
 
 // ***************************************************** //
