@@ -70,12 +70,12 @@ private:
 	* can hold any int or float
 	* @return parsing error code
 	*/
-	int Term(game::Symbol_Core* _ret = nullptr, game::Symbol_Function* _function = nullptr, TokenType _endChar = TokenType::End);
-	int Term(game::Symbol_Core* _ret = nullptr, TokenType _endChar = TokenType::End) { return Term(_ret, nullptr, _endChar); };
+	void Term(game::Symbol_Core* _ret = nullptr, game::Symbol_Function* _function = nullptr, TokenType _endChar = TokenType::End);
+	void Term(game::Symbol_Core* _ret = nullptr, TokenType _endChar = TokenType::End) { return Term(_ret, nullptr, _endChar); };
 
-	int pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
+	void pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
 
-	inline int pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
+	inline void pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack);
 
 	//pushes the code that assigns the values on the stack to the function params
 	void assignFunctionParam(game::Symbol_Function& _func);
@@ -92,16 +92,16 @@ private:
 	* @param _token first token of the instruction
 	* @param _stack the stack where the bytecode is pushed to
 	*/
-	int codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol);
-	int codeBlock(game::Symbol_Function& _functionSymbol) { return codeBlock(*m_lexer->nextToken(), _functionSymbol); };
+	void codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol);
+	void codeBlock(game::Symbol_Function& _functionSymbol) { return codeBlock(*m_lexer->nextToken(), _functionSymbol); };
 
-	int parseCodeBlock(CodeToParse& _codeToParse);
-	int parseCodeBlock(game::Symbol_Function& _functionSymbol); //does the actual work and may be used recursive
+	void parseCodeBlock(CodeToParse& _codeToParse);
+	void parseCodeBlock(game::Symbol_Function& _functionSymbol); //does the actual work and may be used recursive
 
 	/* conditionalBlock() ***************************
 	 * parses a conditional structure started by an "if"
 	 */
-	int conditionalBlock(game::Symbol_Function& _functionSymbol);
+	void conditionalBlock(game::Symbol_Function& _functionSymbol);
 
 	/* declareVar() *********************************
 	 * reads the type and adds the symbol to the table
@@ -109,30 +109,30 @@ private:
 	 * @param _table the SymbolTable the symbol should be added to
 	 * @return parsing error code
 	 */
-	int declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table);
+	void declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table);
 
 	/* declareFunc() ********************************
 	 */
-	int declareFunc();
+	void declareFunc();
 
 	/* declareClass() *********************************
 	* reads the type and adds the symbol to the table
 	*/
-	int declareClass();
+	void declareClass();
 
 	/* declareInstance() ********************************
 	*/
-	int declareInstance();
+	void declareInstance();
 
 	/* declarePrototype *****************************
 	*/
-	int declarePrototype();
+	void declarePrototype();
 
 	/* parserLog() **********************************
 	 * A wrapper for LOG(lvl) that
 	 * prints the filename aswell as the line number
 	 */
-	void parserLog(LogLvl _lvl, const std::string& _msg, Token* _token = nullptr);
+	void parserLog(LogLvl _lvl, const std::string& _msg, Token* _token = nullptr, Lexer* _lexer = nullptr);
 
 	inline int getType(Token& _token);
 

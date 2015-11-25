@@ -9,7 +9,7 @@ using namespace std;
 namespace par{
 
 
-	int Parser::Term(game::Symbol_Core* _ret, game::Symbol_Function* _function, TokenType _endChar)
+	void Parser::Term(game::Symbol_Core* _ret, game::Symbol_Function* _function, TokenType _endChar)
 	{
 		game::ByteCodeStack* instrStack = _function ? &_function->byteCode : nullptr;
 
@@ -245,7 +245,7 @@ namespace par{
 
 				game::DummyInt result(0);
 
-				if (Term(&result, TokenType::SquareBracketRight)) PARSINGERROR("Term does not resolve to an int.", token);
+				Term(&result, TokenType::SquareBracketRight); //PARSINGERROR("Term does not resolve to an int.", token);
 
 				TOKEN(SquareBracketRight);
 
@@ -407,20 +407,18 @@ namespace par{
 		}
 
 		if(instrStack) pushInstr(*outputQue.begin(), *instrStack);
-
-		return 0;
 	}
 
 	// ***************************************************** //
 
-	int Parser::pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
+	void Parser::pushParamInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
 	{
 		//consts
 
 		if (_sym->type == 8 || _sym->type == 9)
 		{
 			_instrStack.emplace_back(game::Instruction::pushInt, ((game::DummyInt*)_sym)->value);
-			return 0;
+			return;
 		}
 		// class member
 		else if (_sym->type == 11)
@@ -428,7 +426,7 @@ namespace par{
 			game::Symbol* instancePtr = ((game::DummyInstance*)_sym)->value;
 			_instrStack.emplace_back(game::Instruction::setInst, instancePtr);
 			m_thisInst = instancePtr;
-			return 0;
+			return;
 		}
 
 		game::Symbol& sym = *(game::Symbol*)_sym;
@@ -441,7 +439,7 @@ namespace par{
 				_instrStack.emplace_back(game::Instruction::pushArray, ((par::ArraySymbol*)_sym)->symbol);
 				_instrStack.emplace_back((game::Instruction)((par::ArraySymbol*)_sym)->index);
 
-				return 0;
+				return;
 			}
 		}
 
@@ -466,13 +464,11 @@ namespace par{
 			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym));
 			//return -1;
 		}
-
-		return 0;
 	}
 
 	// ***************************************************** //
 
-	int Parser::codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol)
+	void Parser::codeBlock(par::Token& _token, game::Symbol_Function& _functionSymbol)
 	{
 		Token* tokenOpt;
 
@@ -492,14 +488,13 @@ namespace par{
 
 		//jumped over the next token
 		m_lexer->prev();
-		SEMIKOLON;
 
-		return 0;
+		SEMIKOLON;
 	}
 
 	// ***************************************************** //
 
-	int Parser::parseCodeBlock(CodeToParse& _codeToParse)
+	void Parser::parseCodeBlock(CodeToParse& _codeToParse)
 	{
 		//restore envoirement of the block
 		m_lexer->setTokenIt(_codeToParse.m_tokenIt);
@@ -508,13 +503,11 @@ namespace par{
 		if (_codeToParse.m_function.name == "b_countcanyonrazor") 
 			int uo = 1;
 		parseCodeBlock(_codeToParse.m_function);
-
-		return 0;
 	}
 
 	// ***************************************************** //
 
-	int Parser::parseCodeBlock(game::Symbol_Function& _functionSymbol)
+	void Parser::parseCodeBlock(game::Symbol_Function& _functionSymbol)
 	{
 		TOKEN(CurlyBracketLeft);
 
@@ -558,13 +551,11 @@ namespace par{
 
 		//reset the thisInst
 		m_thisInst = nullptr;
-
-		return 0;
 	}
 
 	// ***************************************************** //
 
-	int Parser::conditionalBlock(game::Symbol_Function& _functionSymbol)
+	void Parser::conditionalBlock(game::Symbol_Function& _functionSymbol)
 	{
 		std::vector < size_t > endJumps; //list of jumps that should lead to the end of the conditional block
 
@@ -613,13 +604,11 @@ namespace par{
 			_functionSymbol.byteCode[endJumps[i]].param = nextInstruction;
 
 		m_lexer->prev();
-
-		return 0;
 	}
 
 	// ***************************************************** //
 
-	int Parser::pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
+	void Parser::pushInstr(game::Symbol_Core* _sym, game::ByteCodeStack& _instrStack)
 	{
 		if (!_sym->isOperator)
 		{
@@ -639,8 +628,6 @@ namespace par{
 				_instrStack.push_back(stackInstr);
 			}
 		}
-
-		return 0;
 	}
 
 	// ***************************************************** //

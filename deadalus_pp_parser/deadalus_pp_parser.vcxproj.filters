@@ -81,6 +81,9 @@
     <ClInclude Include="stats.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="parexception.h">
+      <Filter>parser</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

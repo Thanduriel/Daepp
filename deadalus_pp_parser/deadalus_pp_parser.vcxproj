@@ -297,6 +297,7 @@
     <ClInclude Include="fusedcontainer.h" />
     <ClInclude Include="gamedata.h" />
     <ClInclude Include="lexer.h" />
+    <ClInclude Include="parexception.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="parserconfig.h" />
     <ClInclude Include="parserintern.h" />

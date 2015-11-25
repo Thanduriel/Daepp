@@ -2,3 +2,6 @@
 /preMultiThreading
 /Release
 /x64
+deadalus_pp_parser/debug
+*.suo
+*.blob

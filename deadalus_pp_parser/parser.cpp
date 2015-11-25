@@ -77,26 +77,35 @@ void Parser::parse(const std::string& _fileName)
 	clock_t end = clock();
 	LOG(INFO) << "Finished tokenizing in " << double(end - begin) / CLOCKS_PER_SEC << "sec";
 
-	LOG(INFO) << "Parsing code files.";
-	definitionsToParse.resize(lexers.size());
-	//the actual declaration parsing process begins
-	for (int i = 0; i < (int)lexers.size(); ++i)
+	try
 	{
-		m_codeQue = &definitionsToParse[i];
-		parseFile(*lexers[i]);
+
+		LOG(INFO) << "Parsing code files.";
+		definitionsToParse.resize(lexers.size());
+		//the actual declaration parsing process begins
+		for (int i = 0; i < (int)lexers.size(); ++i)
+		{
+			m_codeQue = &definitionsToParse[i];
+			parseFile(*lexers[i]);
+		}
+
+		//finally parse function definitions
+		LOG(INFO) << "Parsing function definitions.";
+
+		for (int i = 0; i < (int)definitionsToParse.size(); ++i)
+		{
+			m_lexer = lexers[i].get();
+			for (auto& codeToParse : definitionsToParse[i])
+				parseCodeBlock(codeToParse);
+		}
+
+		LOG(INFO) << "Finished parsing.";
+
 	}
-
-	//finally parse function definitions
-	LOG(INFO) << "Parsing function definitions.";
-
-	for (int i = 0; i < (int)definitionsToParse.size(); ++i)
+	catch (ParsingError& _error)
 	{
-		m_lexer = lexers[i].get();
-		for (auto& codeToParse : definitionsToParse[i])
-			parseCodeBlock(codeToParse);
+		parserLog(Error, _error.message, _error.token, _error.lexer);
 	}
-
-	LOG(INFO) << "Finished parsing.";
 }
 
 // ***************************************************** //
@@ -266,33 +275,31 @@ int Parser::parseFile(Lexer& _lexer)
 			PARSINGERROR("Word expected.", pToken);
 		}
 
-		int returnCode = 0;
-
 		int len = 1 + pToken->end - pToken->begin;
 
 		if (m_lexer->compare(*pToken, "const"))
 		{
-			returnCode = declareVar(1, m_gameData.m_symbols);
+			declareVar(1, m_gameData.m_symbols);
 		}
 		else if (m_lexer->compare(*pToken, "var"))
 		{
-			returnCode = declareVar(0, m_gameData.m_symbols);
+			declareVar(0, m_gameData.m_symbols);
 		}
 		else if (m_lexer->compare(*pToken, "func"))
 		{
-			returnCode = declareFunc();
+			declareFunc();
 		}
 		else if (m_lexer->compare(*pToken, "class"))
 		{
-			returnCode = declareClass();
+			declareClass();
 		}
 		else if (m_lexer->compare(*pToken, "instance"))
 		{
-			returnCode = declareInstance();
+			declareInstance();
 		}
 		else if (m_lexer->compare(*pToken, "prototype"))
 		{
-			returnCode = declarePrototype();
+			declarePrototype();
 		}
 		//not recognized?
 		else
@@ -302,7 +309,6 @@ int Parser::parseFile(Lexer& _lexer)
 			//LOG(ERROR) << m_currentFile.substr(begin, m_pp - begin) << " is not a recognized symbol.";
 			PARSINGERROR("Uknown symbol type.", pToken);
 		}
-		if (returnCode == -1) return -1;
 	}
 
 	//now all symbols are known -> parse function definitions
@@ -314,7 +320,7 @@ int Parser::parseFile(Lexer& _lexer)
 
 // ***************************************************** //
 
-int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
+void Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 {
 	//gothic parser types:
 	// 1 - float
@@ -393,7 +399,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 	//finished
 	if (!_const && token->type == End)
 	{
-		return 0;
+		return;
 	}
 	//constants need to be initialized instantly
 	//todo make this faster 
@@ -413,14 +419,14 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 			for (int i = 0; i < arraySize - 1; ++i)
 			{
 				game::DummyInt result(0);
-				if (Term(&result, TokenType::Comma)) return -1;
+				Term(&result, TokenType::Comma);
 				constSymbol->value[i] = result.value;
 
 				TOKEN(Comma)
 			}
 
 			game::DummyInt result(0);
-			if (Term(&result, endChar)) return -1;
+			Term(&result, endChar);
 			constSymbol->value[arraySize - 1] = result.value;
 
 			m_gameData.m_constSymbols.push_back(*symbol);
@@ -433,14 +439,14 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 			for (int i = 0; i < arraySize - 1; ++i)
 			{
 				game::DummyFloat result(0);
-				if (Term(&result, TokenType::Comma)) return -1;
+				Term(&result, TokenType::Comma);
 				constSymbol->value[i] = result.value;
 
 				TOKEN(Comma)
 			}
 
 			game::DummyFloat result(0);
-			if (Term(&result, endChar)) return -1;
+			Term(&result, endChar);
 			constSymbol->value[arraySize-1] = result.value;
 
 			m_gameData.m_constSymbols.push_back(*symbol);
@@ -478,7 +484,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 
 		m_gameData.m_symbols.add(symbol);
 
-		return 0;
+		return;
 	}
 
 	PARSINGERROR("Unexpected token.", token);
@@ -486,7 +492,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 
 // ***************************************************** //
 
-int Parser::declareFunc()
+void Parser::declareFunc()
 {
 	TOKENEXT(Symbol, typeToken);
 	TOKENEXT(Symbol, nameToken);
@@ -538,7 +544,7 @@ int Parser::declareFunc()
 	{
 		TOKEN(End);
 		functionSymbol.addFlag(game::Flag::External);
-		return 0;
+		return;
 	}
 
 	m_lexer->prev();
@@ -548,28 +554,12 @@ int Parser::declareFunc()
 	//code block
 	codeBlock(functionSymbol);
 	
-/*	if (!TOKENOPT(End))
-	{
-		if (m_alwaysSemikolon)
-		{
-			PARSINGERROR("End';' expected.", tokenOpt);
-		}
-		else //read token is part of the next declaration
-			m_lexer->prev();
-	}*/
-
-	//always end with a return
-	//for some reason gothic even ends with two rets 
-	//same happens here when a "return" is found
-	//update: the compiler adds one return to every function including those without a body
-	//functionSymbol.byteCode.emplace_back(game::Instruction::Ret);
-
-	return 0;
+	return;
 }
 
 // ***************************************************** //
 
-int Parser::declareInstance()
+void Parser::declareInstance()
 {
 	Token* tokenOpt;
 
@@ -651,12 +641,12 @@ int Parser::declareInstance()
 			m_gameData.m_symbols.add(new Symbol_Instance(names[i], instance));
 		}
 
-	return 0;
+	return;
 }
 
 // ***************************************************** //
 
-int Parser::declarePrototype()
+void Parser::declarePrototype()
 {
 	string name;
 
@@ -690,12 +680,12 @@ int Parser::declarePrototype()
 
 	m_currentNamespace = nullptr;
 
-	return 0;
+	return;
 }
 
 // ***************************************************** //
 
-int Parser::declareClass()
+void Parser::declareClass()
 {
 	//get name
 	Token* token = m_lexer->nextToken();
@@ -717,18 +707,15 @@ int Parser::declareClass()
 	game::Symbol_Type& type = (Symbol_Type&)m_gameData.m_symbols.back();
 	m_gameData.m_types.push_back(type);
 
-	int ret = 0;
 	//parse all members
-	while ((token = m_lexer->nextToken()) && ret != -1 && m_lexer->compare(*token, "var"))
-		ret = declareVar(0, type.elem);
+	while ((token = m_lexer->nextToken()) && m_lexer->compare(*token, "var"))
+		declareVar(0, type.elem);
 
 	for (size_t i = 0; i < type.elem.size(); ++i)
 	{
 		type.elem[i].setFlag(game::Flag::Classvar);
 		type.elem[i].parent.ptr = &type;
 	}
-
-	if (ret == -1) return -1;
 
 	//the next token is already retrieved by the loop
 
@@ -755,7 +742,7 @@ int Parser::declareClass()
 			m_lexer->prev();
 	}
 
-	return 0;
+	return;
 
 }
 
@@ -771,7 +758,7 @@ void Parser::preDirective(const std::string& _directive)
 
 // ***************************************************** //
 
-void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token)
+void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token, Lexer* _lexer)
 {
 	string msg;
 	//every file has atleast one line
@@ -788,9 +775,9 @@ void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token)
 
 	//since ERROR and WARNING are forwarded by a macro runtime evaluation needs a switch
 	if (_lvl == Error)
-		LOG(ERROR) << msg << " [l." << lineCount << "] " << "[" << m_lexer->getDataName() << "]";
+		LOG(ERROR) << msg << " [l." << lineCount << "] " << "[" << _lexer->getDataName() << "]";
 	else if (_lvl == Warning)
-		LOG(WARNING) << msg << " [l." << lineCount << "] " << "[" << m_lexer->getDataName() << "]";
+		LOG(WARNING) << msg << " [l." << lineCount << "] " << "[" << _lexer->getDataName() << "]";
 
 	//show +- 3 lines of the code where the error was found
 	if (m_config.m_showCodeSegmentOnError && _token)

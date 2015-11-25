@@ -1,17 +1,18 @@
 #pragma once
 
 #include "symbolext.h"
-#include "lexer.h"
+#include "parexception.h"
 
 //data structures with wich the parser works
 // that do not appear outside
 
 
 //macros
-#define PARSINGERROR(a,b) {parserLog(Error, a, b); return -1;} 
+#define PARSINGERROR(a,b) { throw ParsingError(a, b, m_lexer); }
+//{parserLog(Error, a, b); return -1;} 
 
 //checks a Token* and handles the error
-#define NULLCHECK(a) if(!a) {m_lexer->prev(); parserLog(Error, "Unexepected end of file.", m_lexer->nextToken()); return -1;} 
+#define NULLCHECK(a) if(!a) {throw ParsingError("Unexepected end of file.");} 
 
 //easy token reading from the stream including error checks
 #define TOKEN(type) {Token* tokenIntern = m_lexer->nextToken(); NULLCHECK(tokenIntern); if(*tokenIntern != type) PARSINGERROR("Unexpected token.",tokenIntern) }
