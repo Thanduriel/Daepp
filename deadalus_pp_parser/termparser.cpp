@@ -36,6 +36,9 @@ namespace par{
 
 		while (token = m_lexer->nextToken())
 		{
+			//just a helper 
+			bool foundSymbol = false;
+
 			if (*token == _endChar)
 			{
 				m_lexer->prev();
@@ -66,25 +69,10 @@ namespace par{
 				//find a symbol with the given name
 				string str = m_lexer->getWord(*token);
 				int i;
-				//known constants are valid anywhere
-				if ((i = utils::find(m_gameData.m_constSymbols, str)) != -1)
+				if (_function)
 				{
-					//inline them by pushing just the data to the que
-					game::Symbol_Core* sym;
-					switch (m_gameData.m_constSymbols[i].type)
-					{
-					case 1:
-						sym = new DummyFloat(((ConstSymbol_Float&)m_gameData.m_constSymbols[i]).value[0]);
-						break;
-					case 2:
-						sym = new DummyInt(((ConstSymbol_Int&)m_gameData.m_constSymbols[i]).value[0]);
-						break;
-					}
-					dummySymbols.emplace_back(sym);
-					outputQue.push_back(sym);
-				}
-				else if (_function)
-				{
+					foundSymbol = true;
+
 					if ((i = _function->locals.find(str)) != -1)
 					{
 						outputQue.push_back(&_function->locals[i]);
@@ -146,8 +134,29 @@ namespace par{
 						}
 						else PARSINGERROR(m_gameData.m_types[j].name + " has no member with this name.", token);
 					}
+					else foundSymbol = false;
 				}
-				else PARSINGERROR("Unknown symbol or not a const expression.", token);
+				//known constants are valid anywhere
+				if (!foundSymbol)
+				{
+					if ((i = utils::find(m_gameData.m_constSymbols, str)) != -1)
+					{
+						//inline them by pushing just the data to the que
+						game::Symbol_Core* sym;
+						switch (m_gameData.m_constSymbols[i].type)
+						{
+						case 1:
+							sym = new DummyFloat(((ConstSymbol_Float&)m_gameData.m_constSymbols[i]).value[0]);
+							break;
+						case 2:
+							sym = new DummyInt(((ConstSymbol_Int&)m_gameData.m_constSymbols[i]).value[0]);
+							break;
+						}
+						dummySymbols.emplace_back(sym);
+						outputQue.push_back(sym);
+					}
+					else PARSINGERROR("Unknown symbol or not a const expression.", token);
+				}
 			}
 			//operators to the operatorstack
 			else if ((*token).type == TokenType::Operator)
@@ -496,6 +505,8 @@ namespace par{
 		m_lexer->setTokenIt(_codeToParse.m_tokenIt);
 		m_currentNamespace = _codeToParse.m_namespace;
 
+		if (_codeToParse.m_function.name == "b_countcanyonrazor") 
+			int uo = 1;
 		parseCodeBlock(_codeToParse.m_function);
 
 		return 0;
@@ -671,6 +682,7 @@ namespace par{
 		{
 			//dirty hack
 			//results into a pointer typecast of the value
+			//what nothing happens with _found afterwards
 			_found = 8;
 
 			return true;
@@ -679,7 +691,7 @@ namespace par{
 		else if (_expected == 2 && (_found == 8 || _found == 7 || _found >= g_atomTypeCount)) return true;
 		//and any instance
 		//default instance(7) is valid with any kind of instance params
-		//aswell as 
+		//aswell as thisInst
 		else if (_expected == 7 && (_found >= g_atomTypeCount || _found == 11)) return true;
 
 		return false;

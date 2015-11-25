@@ -18,10 +18,11 @@ public:
 	/* SymbolTable() **************************
 	 * fast constructor
 	 */
-	SymbolTable(){};
+	SymbolTable() : slowMode(false){};
 	/* takes an initializer_list to init with its values
 	 */
 	SymbolTable(std::initializer_list< _T* >& _init)
+		:slowMode(false)
 	{
 		for (auto* ty : _init)
 			m_elem.emplace_back(ty);

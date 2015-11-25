@@ -160,7 +160,7 @@ void Lexer::analyse(std::string&& _text)
 				//check for an unary minus
 				auto it = m_tokens.end(); it--;
 				//can not be an operator if not precedied by a symbol or constant
-				if (m_text[i] == '-' && it->type != TokenType::Constant && it->type != TokenType::Symbol)
+				if (m_text[i] == '-' && it->type != TokenType::ConstInt && it->type != TokenType::ConstFloat && it->type != TokenType::Symbol)
 				{
 					m_text[i] = 'u'; // u for unary minus
 				}

@@ -68,7 +68,7 @@ namespace game{
 		 * Creates a symbol with the specified params
 		 * and an unique id.
 		 */
-		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, size_t _size = 1, int _parent = 0xFFFFFFFF)
+		Symbol(const std::string& _name, unsigned int _type, unsigned int _flags = 0, size_t _size = 1, VirtualId _parent = 0xFFFFFFFF)
 			: name(_name),
 			Symbol_Core(_type),
 			size(_size),

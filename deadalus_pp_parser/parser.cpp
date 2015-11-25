@@ -224,7 +224,7 @@ void Parser::tokenizeFile(const std::string& _fileName, Lexer* _lexer)
 	//check if file is valid
 	if (!in)
 	{
-		LOG(ERROR) << "Code-File " << _fileName << " not found.";
+		LOG(ERROR) << "Could not open Code-File " << _fileName;
 		return;
 	}
 
@@ -384,7 +384,7 @@ int Parser::declareVar(bool _const, utils::SymbolTable< game::Symbol >& _table)
 		if (!_const)
 		{
 			//type is saved as Symbol::type and as parent id
-			bool check = _table.emplace(word, index, 0, arraySize, index >= g_atomTypeCount ? m_gameData.m_types[index].id : 0xFFFFFFFF);
+			bool check = _table.emplace(word, index, 0, arraySize, index >= g_atomTypeCount ? &m_gameData.m_types[index] : (game::Symbol_Type*)0xFFFFFFFF);
 			if (!check) parserLog(Warning, "Symbol redefinition.", nameToken);
 		}
 
@@ -518,6 +518,7 @@ int Parser::declareFunc()
 
 			//add and fix parent if necessary
 			int type = getType(*paramTypeToken);
+			if (type == -1) PARSINGERROR("Unknown type.", paramTypeToken);
 			functionSymbol.params.emplace(m_lexer->getWord(*paramNameToken), type);
 			if (type >= g_atomTypeCount) functionSymbol.params.back().parent.ptr = &m_gameData.m_types[type];
 			//todo: build uniform way to fix parent
@@ -603,13 +604,14 @@ int Parser::declareInstance()
 		if(i == -1) PARSINGERROR("Unknown type.", typeToken);
 
 		//init function starts with a call to its prototype
-		instance.byteCode.emplace_back(game::Instruction::call, m_gameData.m_prototypes[i].id);
+		instance.byteCode.emplace_back(game::Instruction::call, &m_gameData.m_prototypes[i]);
 
 		for (size_t j = 0; j < m_gameData.m_types.size(); ++j)
 		{
 			if (&m_gameData.m_types[j] == m_gameData.m_prototypes[i].parent.ptr)
 			{
 				instance.type = (unsigned int)j;
+				break;
 			}
 		}
 		instance.parent.ptr = &m_gameData.m_prototypes[i];

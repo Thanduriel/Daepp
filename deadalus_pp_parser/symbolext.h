@@ -230,7 +230,6 @@ namespace game{
 		~ConstSymbol() { delete[] value; };
 
 		_T* value;
-		size_t size;
 
 		void saveContent(std::ofstream& _stream) override
 		{
