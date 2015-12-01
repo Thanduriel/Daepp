@@ -5,3 +5,9 @@
 deadalus_pp_parser/debug
 *.suo
 *.blob
+*.psess
+*.sdf
+*.vsp
+*.opensdf
+/zParser/decdat
+/zParser/DecDat 1.0a
