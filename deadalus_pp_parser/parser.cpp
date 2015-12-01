@@ -52,7 +52,7 @@ Parser::Parser(const std::string& _configFile)
 
 // ***************************************************** //
 
-void Parser::parse(const std::string& _fileName)
+bool Parser::parse(const std::string& _fileName)
 {
 	//reserve some memory to reduce reallocations
 	m_gameData.m_symbols.reserve(4096);
@@ -105,7 +105,11 @@ void Parser::parse(const std::string& _fileName)
 	catch (ParsingError& _error)
 	{
 		parserLog(Error, _error.message, _error.token, _error.lexer);
+
+		return false;
 	}
+
+	return true;
 }
 
 // ***************************************************** //
@@ -553,8 +557,6 @@ void Parser::declareFunc()
 
 	//code block
 	codeBlock(functionSymbol);
-	
-	return;
 }
 
 // ***************************************************** //
@@ -754,6 +756,7 @@ void Parser::preDirective(const std::string& _directive)
 	int begin = 0;
 	int end = 0;
 	bool searchBeg = true;
+	//find keyword
 	for (int i = 1; i < (int)_directive.size(); ++i)
 	{
 		if (searchBeg)

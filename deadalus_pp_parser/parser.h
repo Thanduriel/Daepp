@@ -35,8 +35,9 @@ public:
 	/* parse() ************************************
 	* Takes a .src file and parses all the files named within,
 	* building the GameData.
+	* Returns true when no error occured.
 	*/
-	void parse(const std::string& _fileName);
+	bool parse(const std::string& _fileName);
 
 	/* parseFile() ************************************
 	* Parses a token stream hold by the given lexer
