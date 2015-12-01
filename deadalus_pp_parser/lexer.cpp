@@ -48,7 +48,7 @@ void Lexer::analyse(std::string&& _text)
 	unsigned int begin = 0;
 	unsigned int end = 0;
 
-	//state for word / number reading
+	//state for multichar(word / number) reading
 	int lookEnd = 0;
 
 	//'.' count in numbers
@@ -225,8 +225,8 @@ void Lexer::analyse(std::string&& _text)
 	m_iterator = m_tokens.begin();
 
 	//test
-//	static utils::StatCalculator< unsigned int > stats(100);
-//	stats.inc((unsigned int)m_tokens.size());
+	static utils::StatCalculator< unsigned int > stats(100);
+	stats.inc((unsigned int)m_tokens.size());
 }
 
 // ********************************************* //

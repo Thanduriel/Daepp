@@ -462,7 +462,6 @@ namespace par{
 			break;
 		default: 
 			_instrStack.emplace_back(game::Instruction::pushInst, ((game::Symbol*)_sym));
-			//return -1;
 		}
 	}
 

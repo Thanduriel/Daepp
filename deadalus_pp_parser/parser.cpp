@@ -794,10 +794,15 @@ void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token, Lexe
 	string msg;
 	//every file has atleast one line
 	int lineCount = 1;
+
+	//when a token is provided give information where it can be found
 	if (_token)
 	{
+		//when no lexer is given the current one is assumed
+		if (!_lexer) _lexer = m_lexer;
+
 		for (unsigned int i = 0; i < _token->begin; ++i)
-			if (m_lexer->getRawText()[i] == '\n') ++lineCount;
+			if (_lexer->getRawText()[i] == '\n') ++lineCount;
 
 		msg = "Found: \"" + m_lexer->getWord(*_token) + "\" - ";
 	}
@@ -813,7 +818,7 @@ void Parser::parserLog(LogLvl _lvl, const std::string& _msg, Token* _token, Lexe
 	//show +- 3 lines of the code where the error was found
 	if (m_config.m_showCodeSegmentOnError && _token)
 	{	
-		std::cout << utils::strInterval(m_lexer->getRawText(), _token->begin, _token->end, 3) << endl << endl;
+		std::cout << utils::strInterval(_lexer->getRawText(), _token->begin, _token->end, 3) << endl << endl;
 	}
 }
 
