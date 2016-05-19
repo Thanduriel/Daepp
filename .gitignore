@@ -9,5 +9,6 @@ deadalus_pp_parser/debug
 *.sdf
 *.vsp
 *.opensdf
+*.obj
 /zParser/decdat
 /zParser/DecDat 1.0a

@@ -32,8 +32,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	clock_t begin = clock();
 
-	if(parser.parse("gothic.src"))
-		parser.compile();
+	if (parser.parse("gothic.src"));
+//		parser.compile();
 	
 	clock_t end = clock();
 

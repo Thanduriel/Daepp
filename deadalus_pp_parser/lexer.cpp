@@ -43,7 +43,7 @@ void Lexer::analyse(std::string&& _text)
 {
 	m_text = _text;
 	//reset
-	m_tokens.resize(0);
+	m_tokens.reserve(2048);
 
 	unsigned int begin = 0;
 	unsigned int end = 0;
@@ -157,12 +157,13 @@ void Lexer::analyse(std::string&& _text)
 				if (m_text[i + 1] == m_text[i] || m_text[i + 1] == '=')
 					i++;
 
-				//check for an unary minus
+				//check for an unary minus / unary operands
 				auto it = m_tokens.end(); it--;
 				//can not be an operator if not precedied by a symbol or constant
-				if (m_text[i] == '-' && it->type != TokenType::ConstInt && it->type != TokenType::ConstFloat && it->type != TokenType::Symbol)
+				if (it->type != TokenType::ConstInt && it->type != TokenType::ConstFloat && it->type != TokenType::Symbol)
 				{
-					m_text[i] = 'u'; // u for unary minus
+					if (m_text[i] == '-') m_text[i] = 'u'; // u for unary minus
+					else if (m_text[i] == '+') continue; // '+' has no semantic -> just skip it
 				}
 
 				m_tokens.emplace_back(TokenType::Operator, begin, (unsigned int)i);
@@ -225,8 +226,8 @@ void Lexer::analyse(std::string&& _text)
 	m_iterator = m_tokens.begin();
 
 	//test
-	static utils::StatCalculator< unsigned int > stats(100);
-	stats.inc((unsigned int)m_tokens.size());
+//	static utils::StatCalculator< unsigned int > stats(100);
+//	stats.inc((unsigned int)m_tokens.size());
 }
 
 // ********************************************* //

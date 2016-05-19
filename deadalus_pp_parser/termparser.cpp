@@ -73,7 +73,30 @@ namespace par{
 				{
 					foundSymbol = true;
 
-					if ((i = _function->locals.find(str)) != -1)
+					//a member var with a '.' int front of it
+					if (operatorStack.size() && operatorStack.back() && operatorStack.back()->value == 2)
+					{
+						size_t j = outputQue.back()->type;
+						i = m_gameData.m_types[j].elem.find(str);
+						if (i != -1)
+						{
+							//the correct this pointer is set by pushParamInstr
+							//remove the instance name
+							auto& instance = *(game::Symbol*)outputQue.back();
+							outputQue.pop_back();
+							operatorStack.pop_back(); // pop '.'
+
+							//exchange it for a dummy
+							game::Symbol_Core* sym = new DummyInstance(&instance);
+							dummySymbols.emplace_back(sym);
+							outputQue.push_back(sym);
+
+							outputQue.push_back(&(m_gameData.m_types[j].elem[i]));
+						}
+						else
+							PARSINGERROR(m_gameData.m_types[j].name + " has no member with this name.", token);
+					}
+					else if ((i = _function->locals.find(str)) != -1)
 					{
 						outputQue.push_back(&_function->locals[i]);
 					}
@@ -112,27 +135,6 @@ namespace par{
 					else if (m_currentNamespace && ((i = m_currentNamespace->elem.find(str)) != -1))
 					{
 						outputQue.push_back(&(m_currentNamespace->elem[i]));
-					}
-					//a member var with a '.' int front of it
-					else if (operatorStack.size() && operatorStack.back() && operatorStack.back()->value == 2)
-					{
-						size_t j = outputQue.back()->type;
-						i = m_gameData.m_types[j].elem.find(str);
-						if (i != -1)
-						{
-							//the correct this pointer is set by pushParamInstr
-							//remove the instance name
-							auto& instance = *(game::Symbol*)outputQue.back();
-							outputQue.pop_back();
-
-							//exchange it for a dummy
-							game::Symbol_Core* sym = new DummyInstance(&instance);
-							dummySymbols.emplace_back(sym);
-							outputQue.push_back(sym);
-
-							outputQue.push_back(&(m_gameData.m_types[j].elem[i]));
-						}
-						else PARSINGERROR(m_gameData.m_types[j].name + " has no member with this name.", token);
 					}
 					else foundSymbol = false;
 				}
@@ -278,7 +280,7 @@ namespace par{
 		do
 		{
 			//search for the next operator
-			while (!(*it)->isOperator) it++;
+			while (!(*it)->isOperator) ++it;
 
 			MathSymbol& op = *((MathSymbol*)(*it));
 
@@ -373,7 +375,7 @@ namespace par{
 			}
 			//it is still pointing to the processed operator
 			it++;
-		} while (outputQue.size() > 1);
+		} while (outputQue.size() > 1 && it != outputQue.end());
 
 
 		if (_ret)
@@ -480,6 +482,9 @@ namespace par{
 
 		do
 		{
+			//check after the last token has been registered so that the loop can exist even properly with the last token beeing "}"
+			if (!token) PARSINGERROR("Expected token '}', but found end of file.", token);
+
 			if (token->type == CurlyBracketLeft) bracketCount++;
 			else if (token->type == CurlyBracketRight) bracketCount--;
 			token = m_lexer->nextToken();
@@ -499,7 +504,7 @@ namespace par{
 		m_lexer->setTokenIt(_codeToParse.m_tokenIt);
 		m_currentNamespace = _codeToParse.m_namespace;
 
-		if (_codeToParse.m_function.name == "b_countcanyonrazor") 
+		if (_codeToParse.m_function.name == "b_malcomexident")
 			int uo = 1;
 		parseCodeBlock(_codeToParse.m_function);
 	}

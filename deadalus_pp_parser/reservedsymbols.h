@@ -139,7 +139,21 @@ namespace lang{
 		}),
 		Operator("<=", 8, LtR, 2,game::Instruction::leq),
 		Operator(">=", 8, LtR, 2,game::Instruction::heg),
-		Operator("==", 9, LtR, 2, game::Instruction::eq),
+		Operator("==", 9, LtR, 2, game::Instruction::eq,
+			{
+				{ 0x00070007, [](OPPARAMLIST)
+				{
+					_stack->emplace_back(game::Instruction::eq);
+
+					return new game::Symbol_Core(7);
+				} },
+				{ 0x00020007, [](OPPARAMLIST)
+				{
+					_stack->emplace_back(game::Instruction::eq);
+
+					return new game::Symbol_Core(7);
+				} }
+			}),
 		Operator("!=", 9, LtR, 2, game::Instruction::neq),
 		Operator("&", 10, LtR, 2),
 		Operator("^", 11, LtR, 2),
@@ -198,7 +212,7 @@ namespace lang{
 		Operator("-=", 15, RtL, 2, game::Instruction::assignSub),
 		Operator("*=", 15, RtL, 2, game::Instruction::assignMul),
 		Operator("/=", 15, RtL, 2, game::Instruction::assignDiv),
-		Operator("u", 2, LtR, 1, game::Instruction::uMinus,
+		Operator("u", 3, LtR, 1, game::Instruction::uMinus,
 		{
 			{ 0x00080008, [](OPPARAMLIST)
 			{

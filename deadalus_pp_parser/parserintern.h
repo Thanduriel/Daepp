@@ -141,14 +141,14 @@ namespace par{
 	class CodeToParse
 	{
 	public:
-		CodeToParse(std::list< par::Token >::iterator _tokenIt, game::Symbol_Function& _function, Namespace* _namespace = nullptr) :
+		CodeToParse(TokenIterator _tokenIt, game::Symbol_Function& _function, Namespace* _namespace = nullptr) :
 			m_tokenIt(_tokenIt),
 			m_function(_function),
 			m_namespace(_namespace)
 		{
 		};
 	
-		std::list< par::Token >::iterator m_tokenIt; //token referencing to the '{'
+		TokenIterator m_tokenIt; //token referencing to the '{'
 		game::Symbol_Function& m_function; //function that takes the code
 		Namespace* m_namespace;
 	};

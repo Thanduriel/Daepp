@@ -69,7 +69,7 @@ public:
 	}
 
 	/* insert() ************************************************
-	 * Moves another symboltable's content into this one after _begin.
+	 * Moves another container's content into this one after _begin.
 	 * _source is empty afterwards and this symbolTable will switch to slowMode.
 	 */
 	template < typename _Container >

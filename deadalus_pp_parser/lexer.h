@@ -80,6 +80,9 @@ struct Token
 };
 
 
+typedef std::vector < Token > TokenContainer;
+typedef TokenContainer::iterator TokenIterator;
+
 class Lexer
 {
 public:
@@ -112,13 +115,13 @@ public:
 	 * Only looks left of the current token, asuming that you did not jump back
 	 * @return the iterator to the given token
 	 */
-	std::list < Token >::iterator tokenToIterator(par::Token& _tok) { auto newIt = m_iterator; while (_tok != *newIt) newIt--; return newIt; };
+	TokenIterator tokenToIterator(par::Token& _tok) { auto newIt = m_iterator; while (_tok != *newIt) newIt--; return newIt; };
 
 	/* setTokenIt() *************************
 	 * sets the stream to the given iterator
 	 * thus nextToken() will be the one after this iterator
 	 */
-	void setTokenIt(std::list < Token >::iterator& _it) { m_iterator = _it; };
+	void setTokenIt(TokenIterator& _it) { m_iterator = _it; };
 
 	/* setItToToken()
 	 * Sets the iterator to point to the current check.
@@ -155,8 +158,8 @@ private:
 	inline bool isValidChar(char _c);
 	//std::list
 	//performance with list: 0.4547
-	std::list < Token > m_tokens;
-	std::list < Token >::iterator m_iterator;
+	TokenContainer m_tokens;
+	TokenIterator m_iterator;
 
 	std::string m_text;
 	std::string m_dataName; // a name associated with the text

@@ -1,6 +1,6 @@
 {
-	"sourceDir" : "C:\Spiele\Gothic II\_work\data\SCRIPTS\Content",
-	"outputDir" : "C:\Users\Thanduriel\Documents\Projects\deadalus_pp_parser\example\compiled",
+	"sourceDir" : "D:\Gothic II\_work\data\SCRIPTS\Content",
+	"outputDir" : "C:\Users\Thanduriel\Documents\projects\deadalus_pp_parser",
 	
 	"caseSensitive" : false,
 	"alwaysSemicolon" : false,

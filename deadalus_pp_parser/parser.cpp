@@ -48,6 +48,8 @@ Parser::Parser(const std::string& _configFile)
 	m_config.m_alwaysSemicolon = config[string("alwaysSemicolon")];
 	m_config.m_saveInOrder = config[string("saveInOrder")];
 	m_config.m_showCodeSegmentOnError = config[string("showCodeSegmentOnError")];
+
+
 }
 
 // ***************************************************** //
@@ -266,7 +268,7 @@ int Parser::parseFile(Lexer& _lexer)
 	//set current lexer
 	m_lexer = &_lexer;
 
-	LOG(INFO) << "Parsing Code-File " << m_lexer->getDataName();
+//	LOG(INFO) << "Parsing Code-File " << m_lexer->getDataName();
 
 	Token* pToken;
 	//translated part from zParser
